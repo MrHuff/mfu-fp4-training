@@ -1,0 +1,13 @@
+GPU := B200
+
+SRC := nvfp4_cce_backward_v6.cu
+OUT := _C_nv_cce_backward_v6$(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+CMD := echo "built"
+NVCCFLAGS := -DTORCH_COMPILE
+EXTRA_NVCCFLAGS ?=
+CONFIG := pytorch
+
+include ../../common.mk
+
+NVCCFLAGS += -DTORCH_EXTENSION_NAME=_C_nv_cce_backward_v6
+NVCCFLAGS += $(EXTRA_NVCCFLAGS)

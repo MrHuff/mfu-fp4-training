@@ -1,0 +1,475 @@
+{
+  "excluded_counts_by_rule": {
+    "**/*.bak": 1,
+    "**/*.gif": 1,
+    "**/*.gz": 2,
+    "**/*.ipynb": 9,
+    "**/*.jpg": 1,
+    "**/*.out": 8,
+    "**/*.pdf": 1,
+    "**/*.png": 28,
+    "**/*.pq": 1,
+    "**/*.so": 2,
+    "**/*.tar": 1,
+    "**/.gitmodules": 1,
+    "TransformerEngine/.github/**": 16,
+    "TransformerEngine/docs/**": 165,
+    "TransformerEngine/examples/**": 29,
+    "docs/technical_report/build/**": 2,
+    "fp4_runtime/*NOTES*.md": 4,
+    "fp4_runtime/*STATUS*.md": 3,
+    "fp4_runtime/TK_quantisation/nvfp4_CTA_local_v1/*.md": 5,
+    "fp4_runtime/TK_quantisation/nvfp4_CTA_local_v3/*.md": 6,
+    "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/*.md": 4,
+    "low_bits_training/cce/*.md": 6,
+    "low_bits_training/evaluation/simple_evals.py": 1,
+    "low_bits_training/experiments/mxfp4/quantization/stable_spam.py": 1,
+    "low_bits_training/experiments/mxfp8/**": 7,
+    "multinode_trainer.slurm": 1,
+    "tests/ablate_llama_parity_utils.py": 1,
+    "tests/analyze_*.py": 4,
+    "tests/assets/old-configs/**": 4,
+    "tests/assets/test-checkpoint*/**": 9,
+    "tests/bench_*.py": 10,
+    "tests/checks/**": 1,
+    "tests/cpu-evaluate/test_simple_evals.py": 1,
+    "tests/cpu/scripts/checkpoint-backup/**": 4,
+    "tests/cpu/test_build_fp4_b200_runtime_asset.py": 1,
+    "tests/cpu/test_fp4_8b_dev_orchestrator.py": 1,
+    "tests/cpu/test_fp4_8b_production_orchestrator.py": 1,
+    "tests/cpu/test_fp4_head_1b_b300_prod.py": 1,
+    "tests/cpu/test_fp4_head_20b_corrected_*_dev.py": 1,
+    "tests/cpu/test_hf_datasets.py": 1,
+    "tests/cpu/test_hybrid_cpu_pytest_env_isolation.py": 1,
+    "tests/cpu/test_promote_fp4_8b_dev_asset.py": 1,
+    "tests/cpu/test_remote_synchronizer.py": 1,
+    "tests/diagnose_*.py": 1,
+    "tests/gpu/test_checkpoints_gpu.py": 1,
+    "tests/test_promote_pure_v5_b200_r4.py": 1,
+    "tools/public_release_audit.py": 1,
+    "tools/run_mxfp4_highwater_?8s.sh": 1,
+    "torchtitan_submodule/benchmarks/**": 4,
+    "torchtitan_submodule/torchtitan/models/flux/**": 24,
+    "undeclared_nested_component": 6
+  },
+  "matched_values_recorded": false,
+  "release_blocker_count": 0,
+  "release_blockers": [],
+  "safe_content_status": "pass",
+  "sanitized_file_counts_by_rule": {
+    "private_host_path": 53,
+    "static_job_or_run_identity": 9,
+    "storage_uri": 5,
+    "wandb_identity": 2
+  },
+  "sanitized_paths": [
+    {
+      "path": "FP4Dockerfile",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "TransformerEngine/transformer_engine/pytorch/custom_recipes/quantization_custom_format.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/TK_quantisation/nvfp4_v2/test_v2_vs_v1.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/TK_quantisation/nvfp4_v3/bench_v3_vs_v2.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/TK_quantisation/nvfp4_v3/test_all_v3.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/TK_quantisation/nvfp4_v3/test_v3_gemm.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/TK_quantisation/nvfp4_v3/test_v3_vs_v2.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/TK_quantisation/nvfp4_v5/test_split_dyn.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/ThunderKittens/kernels/gemm/mxfp4_gb200/test_diag.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/ThunderKittens/kernels/gemm/mxfp4_gb200/test_te_vs_tk.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue/bench_qkv_split3_onepass.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue_v3/bench_qkv_split3_onepass.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/fp4_cce_TK/mxfp4_cce_tk.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "fp4_runtime/fp4_cce_TK/nvfp4_cce_tk.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/bridge_mcore_fp4.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/cce/backend.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/components/remote_synchronizer.py",
+      "rules": [
+        "storage_uri"
+      ]
+    },
+    {
+      "path": "low_bits_training/datasets/hf_datasets.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/datasets/prepare_and_download.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/evaluation/__init__.py",
+      "rules": [
+        "private_host_path",
+        "wandb_identity"
+      ]
+    },
+    {
+      "path": "low_bits_training/evaluation/parse_olmes.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/experiments/mxfp4/mxfp4_utils/config_generator.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "low_bits_training/experiments/mxfp4/mxfp4_utils/debug_config_generator.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "low_bits_training/quantization/mxfp4_backend.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/quantization/tk_gemm.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/quantization/v7_fused_linear.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "low_bits_training/utils.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "scripts/evaluation/convert_llama8b_dcp_to_hf.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "scripts/evaluation/validate_llama8b_canonical_parity.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "scripts/evaluation/validate_llama8b_conversion_parity.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "tests/assets/README.md",
+      "rules": [
+        "wandb_identity"
+      ]
+    },
+    {
+      "path": "tests/cpu/test_config_manager.py",
+      "rules": [
+        "storage_uri"
+      ]
+    },
+    {
+      "path": "tests/cpu/test_llama_conversion_parity.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "tests/quantization/config_generator.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "tests/quantization/debug_config_generator.py",
+      "rules": [
+        "static_job_or_run_identity"
+      ]
+    },
+    {
+      "path": "tests/quantization/test_backward_gold.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tests/quantization/test_backward_parity.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tests/quantization/test_te_parity_backward.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tests/test_mxfp_custom_usage.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/bench_fp4_cce_e2e.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/bench_mxfp4_backend_isolation.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/bench_split_dgrad.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/bench_synth_1b_fp4.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/build_packed_binary_dataset.py",
+      "rules": [
+        "storage_uri"
+      ]
+    },
+    {
+      "path": "tools/build_slimpajama_packed_binary.sh",
+      "rules": [
+        "storage_uri"
+      ]
+    },
+    {
+      "path": "tools/capture_llama_layerwise_replay.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/check_mxfp4_cde_exact_boundary.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/check_mxfp4_split2_producer.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/check_mxfp4_w2_silu_producer.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/compare_fp4_attention_wrapper_numerics.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/compare_mxfp4_fused_numerics.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/debug_localcta_ffn_block_parity.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/diagnose_localcta_backward_quant.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/evaluation/validation_paper_inputs_r23/seal_results.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/profile_fp4_cce_v4_nvfp4.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_fp4_cce_final_layer_ablation.sh",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_fp4_cce_train_matrix.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_fp4_cce_v2_v3_ablation.sh",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_localcta_v4_rht_matrix.sh",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_mxfp4_highwater_repro.sh",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_nvblog_llama3_8b_matrix.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_nvpaper_1p2b_numerics_500.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/run_slimpajama_mosaic_screen.sh",
+      "rules": [
+        "private_host_path",
+        "storage_uri"
+      ]
+    },
+    {
+      "path": "tools/sweep_mxfp4_8b_gemm_configs.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/sweep_mxfp4_rope_8b_configs.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tools/sweep_mxfp4_tp2_split2_configs.py",
+      "rules": [
+        "private_host_path"
+      ]
+    },
+    {
+      "path": "tune_tk.py",
+      "rules": [
+        "private_host_path"
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "status": "pass",
+  "unsafe_finding_count": 0,
+  "unsafe_findings": []
+}

@@ -1,0 +1,884 @@
+# Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# See LICENSE for license information.
+
+"""Fused Adam optimizer."""
+from __future__ import annotations
+from collections.abc import Iterable
+from copy import deepcopy
+from itertools import chain
+from typing import Optional
+import warnings
+
+import torch
+from torch.distributed._tensor import DTensor
+import transformer_engine_torch as tex
+from transformer_engine.pytorch.tensor.float8_tensor import Float8Tensor, Float8Quantizer
+from transformer_engine.pytorch.quantized_tensor import QuantizedTensor
+from .multi_tensor_apply import multi_tensor_applier
+
+
+def get_fp8_meta(fp8_tensor):
+    """FP8 metadata getter."""
+    assert isinstance(fp8_tensor, Float8Tensor), "Fused optimizer supports only Float8Tensor class"
+    if fp8_tensor._quantizer is None:
+        raise RuntimeError("FP8 quantizer data is not initialized.")
+
+    quantizer = fp8_tensor._quantizer
+
+    scale = quantizer.scale
+    amax = quantizer.amax
+    scale_inv = fp8_tensor._scale_inv
+    return scale, amax, scale_inv
+
+
+class FusedAdam(torch.optim.Optimizer):
+    """Implements Adam algorithm.
+
+    Currently GPU-only.
+
+    This version of fused Adam implements 2 fusions.
+
+      * Fusion of the Adam update's elementwise operations
+      * A multi-tensor apply launch that batches the elementwise updates applied to
+        all the model's parameters into one or a few kernel launches.
+
+    :class:`te.optimizers.FusedAdam` may be used as a drop-in replacement for ``torch.optim.AdamW``,
+    or ``torch.optim.Adam`` with ``adam_w_mode=False``::
+
+        opt = te.optimizers.FusedAdam(model.parameters(), lr = ....)
+        ...
+        opt.step()
+
+    :class:`te.optimizers.FusedAdam` may be used with or without Amp.
+
+    Adam was been proposed in `Adam: A Method for Stochastic Optimization`_.
+
+    Arguments:
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups.
+        lr (float, optional): learning rate. (default: 1e-3)
+        betas (Tuple[float, float], optional): coefficients used for computing
+            running averages of gradient and its square. (default: (0.9, 0.999))
+        eps (float, optional): term added to the denominator to improve
+            numerical stability. (default: 1e-8)
+        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
+        amsgrad (boolean, optional): whether to use the AMSGrad variant of this
+            algorithm from the paper `On the Convergence of Adam and Beyond`_
+            (default: False) NOT SUPPORTED in FusedAdam!
+        bias_correction (bool, optional): apply correction factor to
+            moment estimates. (default: True)
+        adam_w_mode (boolean, optional): Apply L2 regularization or weight decay
+            True for decoupled weight decay(also known as AdamW) (default: True)
+        capturable (bool, optional): whether to use the version of the optimizer
+            that can be used with CUDA Graphs. (default: False)
+        master_weights (bool, optional): whether to maintain FP32 master weights
+           in the optimizer with FP16/BF16 mixed precision training.
+            (default: False)
+        master_weight_dtype (torch.dtype, optional): The dtype of master weights.
+            If master_weights is False, this will be ignored. It can be one of
+            [torch.float32, torch.float16]. If it's not torch.float32, the optimizer
+            will create a FP32 scalar scaling factor to ensure precision.
+            (default: torch.float32)
+        exp_avg_dtype (torch.dtype, optional): The dtype of exp_avg. It can be
+            one of [torch.float32, torch.float16, torch.uint8], where torch.uint8
+            represents FP8. If it's not torch.float32, the optimizer will create
+            a FP32 scalar scaling factor to ensure precision.
+            (default: torch.float32)
+        exp_avg_sq_dtype (torch.dtype, optional): The dtype of exp_avg_sq. It
+            can be one of [torch.float32, torch.float16, torch.uint8], where
+            torch.uint8 represents FP8. If it's not torch.float32, the optimizer
+            will create a FP32 scalar scaling factor to ensure precision.
+            (default: torch.float32)
+        use_decoupled_grad (bool, optional): Whether to use ".decoupled_grad"
+            instead of ".grad" for reading gradients. It's useful when the dtypes
+            of grad and param are different.
+            (default: False)
+        store_param_remainders (bool, optional): Whether to store entire FP32 master
+            params or just store the trailing 16 remainder bits. Whole FP32 master can be
+            reconstructed from BF16 params plus the trailing remainder bits. Works only
+            when param type is BF16 and master weight type is FP32, no effect otherwise.
+            Useful memory saving optimization.
+            (default: False)
+
+
+    .. _Adam - A Method for Stochastic Optimization:
+        https://arxiv.org/abs/1412.6980
+    .. _On the Convergence of Adam and Beyond:
+        https://openreview.net/forum?id=ryQu7f-RZ
+    """
+
+    def __init__(
+        self,
+        params: Iterable[torch.nn.Parameter | dict],
+        lr: float = 1e-3,
+        betas: tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0.0,
+        amsgrad: bool = False,
+        *,
+        bias_correction=True,
+        adam_w_mode=True,
+        capturable=False,
+        master_weights=False,
+        master_weight_dtype=torch.float32,
+        exp_avg_dtype=torch.float32,
+        exp_avg_sq_dtype=torch.float32,
+        use_decoupled_grad=False,
+        store_param_remainders=False,
+        set_grad_none: Optional[bool] = None,  # deprecated
+    ):
+
+        if amsgrad:
+            raise RuntimeError("FusedAdam does not support the AMSGrad variant.")
+
+        # Add constraints to dtypes of states.
+        if master_weights and master_weight_dtype not in [torch.float32, torch.float16]:
+            raise RuntimeError("FusedAdam only supports fp32/fp16 master weights.")
+        if exp_avg_dtype not in [torch.float32, torch.float16, torch.bfloat16, torch.uint8]:
+            raise RuntimeError("FusedAdam only supports fp32/fp16/bf16/fp8 exp_avg.")
+        if exp_avg_sq_dtype not in [torch.float32, torch.float16, torch.bfloat16, torch.uint8]:
+            raise RuntimeError("FusedAdam only supports fp32/fp16/bf16/fp8 exp_avg_sq.")
+
+        # Capturable mode requires fp32 master weights, and optimizer states (exp_avg/exp_avg_sq)
+        # must both be fp32 or both be bf16. This is because master weights in non-fp32 dtypes
+        # or optimizer states in non-fp32/bf16 dtypes require copying to temporary fp32 buffers
+        # before kernel execution, causing different pointers on each `.step()` call and making
+        # CUDA Graph inapplicable.
+        if capturable and master_weights and master_weight_dtype != torch.float32:
+            raise RuntimeError("Capturable mode only supports fp32 master weights.")
+        if capturable:
+            valid_moment_dtypes = (
+                exp_avg_dtype == exp_avg_sq_dtype == torch.float32
+                or exp_avg_dtype == exp_avg_sq_dtype == torch.bfloat16
+            )
+            if not valid_moment_dtypes:
+                raise RuntimeError(
+                    "Capturable mode requires exp_avg_dtype and exp_avg_sq_dtype to be "
+                    "both torch.float32 or both torch.bfloat16, but got "
+                    f"exp_avg_dtype={exp_avg_dtype} and exp_avg_sq_dtype={exp_avg_sq_dtype}."
+                )
+
+        # If the optimizer is capturable then LR should be a tensor (on GPU)
+        lr = torch.tensor(lr, dtype=torch.float32) if capturable else lr
+        defaults = {
+            "lr": lr,
+            "bias_correction": bias_correction,
+            "betas": betas,
+            "eps": eps,
+            "weight_decay": weight_decay,
+        }
+        super().__init__(params, defaults)
+        self.adam_w_mode = 1 if adam_w_mode else 0
+
+        self.capturable = capturable
+        self.master_weights = master_weights
+
+        if capturable:
+            for idx, group in enumerate(self.param_groups):
+                if len(group["params"]) == 0:
+                    continue
+                device = group["params"][0].device
+                for item in ["lr"]:
+                    self.param_groups[idx][item] = group[item].to(device=device)
+
+            self._step_supports_amp_scaling = True
+
+        # Skip buffer
+        self._dummy_overflow_buf = torch.tensor([0], dtype=torch.int, device="cuda")
+        self.multi_tensor_adam = tex.multi_tensor_adam
+        self.multi_tensor_adam_param_remainder = tex.multi_tensor_adam_param_remainder
+        self.multi_tensor_adam_fp8 = tex.multi_tensor_adam_fp8
+        self.multi_tensor_adam_capturable = tex.multi_tensor_adam_capturable
+        self.multi_tensor_adam_capturable_master = tex.multi_tensor_adam_capturable_master
+
+        self.master_weight_dtype = master_weight_dtype
+        self.exp_avg_dtype = exp_avg_dtype
+        self.exp_avg_sq_dtype = exp_avg_sq_dtype
+        self.name_to_dtype_map = {
+            "exp_avg": self.exp_avg_dtype,
+            "exp_avg_sq": self.exp_avg_sq_dtype,
+            "master_param": self.master_weight_dtype,
+        }
+        self.dtype_to_range_map = {
+            torch.float16: torch.full(
+                [1], torch.finfo(torch.float16).max / 2.0, dtype=torch.float32
+            ),
+            torch.uint8: torch.full([1], 448.0, dtype=torch.float32),
+        }
+        self._scales = {}
+        self.use_decoupled_grad = use_decoupled_grad
+        # Works only when master params is in FP32
+        self.store_param_remainders = (
+            store_param_remainders and master_weights and master_weight_dtype == torch.float32
+        )
+        if self.capturable and self.store_param_remainders:
+            raise RuntimeError("Capturable mode doesn't support storing param remainders")
+        # If the exp_avg and exp_avg_sq dtypes are bfloat16, we can fuse the unscaling/scaling
+        # operations into the fused Adam kernel.
+        self.fuse_unscale = self.exp_avg_dtype == self.exp_avg_sq_dtype == torch.bfloat16
+
+        # Deprecated options
+        self.set_grad_none = set_grad_none
+        if self.set_grad_none is not None:
+            warnings.warn(
+                "set_grad_none kwarg in FusedAdam constructor is deprecated. "
+                "Use set_to_none kwarg in zero_grad instead.",
+                DeprecationWarning,
+            )
+
+    def zero_grad(self, set_to_none: Optional[bool] = None) -> None:
+        """Reset parameter gradients.
+
+        Arguments:
+            set_to_none (bool, optional): whether to set grads to `None`
+                instead of zeroing out buffers. (default: True)
+
+        """
+
+        # Handle deprecated set_grad_none option
+        if self.set_grad_none is not None:
+            if set_to_none is not None and set_to_none != self.set_grad_none:
+                raise ValueError(
+                    f"Called zero_grad with set_to_none={set_to_none}, "
+                    f"but FusedAdam was initialized with set_grad_none={self.set_grad_none}"
+                )
+            set_to_none = self.set_grad_none
+        if set_to_none is None:
+            set_to_none = True
+
+        if not self.use_decoupled_grad and not set_to_none:
+            super().zero_grad(set_to_none=set_to_none)
+            return
+
+        for group in self.param_groups:
+            for p in group["params"]:
+                if self.use_decoupled_grad and set_to_none:
+                    p.decoupled_grad = None
+                elif self.use_decoupled_grad and not set_to_none:
+                    p.decoupled_grad.zero_()
+                elif not self.use_decoupled_grad and set_to_none:
+                    p.grad = None
+
+    def _apply_scale(self, state_name, unscaled_state, scaled_state, scale):
+        """Apply scaling on `unscaled_state`. `scaled_state` and `scale` will be written inplace.
+
+        Arguments:
+            state_name (string): Name of optimizer states, can be one of 'exp_avg', 'exp_avg_sq',
+                and 'master_param`.
+            unscaled_state (torch.Tensor): An unscaled high-precision tensor.
+            scaled_state (torch.Tensor): An scaled low-precision tensor.
+            scale (torch.Tensor): A FP32 tensor representing the scaling factor.
+        """
+        assert unscaled_state.dtype == torch.float32
+        if scaled_state.dtype == torch.bfloat16:
+            scaled_state.copy_(unscaled_state.bfloat16())
+            return
+
+        dtype = self.name_to_dtype_map[state_name]
+        if dtype == torch.uint8:
+            assert isinstance(scaled_state, Float8Tensor)
+            assert (
+                len(scaled_state._quantizer.scale) == 1
+            ), "Only scaling with one scaling factor per tensor is supported by the FusedAdam."
+        else:
+            assert scaled_state.dtype == dtype
+
+        max_range = self.dtype_to_range_map[dtype]
+        if max_range.device != scaled_state.device:
+            max_range = max_range.to(scaled_state.device)
+            self.dtype_to_range_map[scaled_state.dtype] = max_range
+        if unscaled_state.device != scaled_state.device:
+            unscaled_state = unscaled_state.to(scaled_state.device)
+        min_val, max_val = torch.aminmax(unscaled_state)
+        absmax = torch.maximum(-min_val, max_val)
+        absmax = absmax.to(dtype=torch.float32, device=unscaled_state.device)
+        torch.div(absmax, max_range, out=scale)
+        if isinstance(scaled_state, Float8Tensor):
+            scaled_state._quantizer.scale.copy_(1 / scale)
+            scaled_state.copy_(unscaled_state)
+        else:
+            rscale = torch.where(scale > 0, scale.reciprocal(), 0.0)
+            unscaled_state.mul_(rscale)
+            scaled_state.copy_(unscaled_state)
+
+    def get_unscaled_state(
+        self, param: torch.nn.Parameter, state_name: str, skip_unscale: bool = False
+    ) -> torch.Tensor:
+        """Return the unscaled state corresponding to the input `param` and `state_name`.
+
+        Arguments:
+            param (torch.nn.Parameter): One of parameters in this optimizer.
+            state_name (string): Name of optimizer states, can be one of 'exp_avg', 'exp_avg_sq',
+                and 'master_param`.
+            skip_unscale (optional, bool): Whether to skip the unscaling operation.
+                Should only be True if 'self.fuse_unscale' is True. Default is False.
+
+        Returns:
+            torch.Tensor: The unscaled state. Note that if the state is in BF16, the returned
+            tensor is still in BF16 because it doesn't require to be "unscaled", otherwise it
+            will be unscaled to FP32.
+        """
+        state = self.state[param]
+        dtype = self.name_to_dtype_map[state_name]
+        unscaled_local_state = state[state_name]
+        if isinstance(unscaled_local_state, DTensor):
+            unscaled_local_state = unscaled_local_state._local_tensor
+        if dtype == torch.uint8:
+            unscaled = unscaled_local_state.float()
+        elif dtype == torch.float16:
+            assert unscaled_local_state.dtype == torch.float16
+            unscaled = unscaled_local_state.float()
+            unscaled.mul_(self._scales[param][state_name])
+        elif dtype == torch.float32:
+            if (
+                self.store_param_remainders
+                and state_name == "master_param"
+                and param.dtype == torch.bfloat16
+            ):
+                assert unscaled_local_state.dtype == torch.int16
+            else:
+                assert unscaled_local_state.dtype == torch.float32
+            unscaled = unscaled_local_state
+        elif dtype == torch.bfloat16:
+            assert unscaled_local_state.dtype == torch.bfloat16
+            if skip_unscale:
+                unscaled = unscaled_local_state
+            else:
+                unscaled = unscaled_local_state.float()
+        else:
+            raise RuntimeError(f"Dtype of {state_name} can only be fp8/fp16/bf16/fp32.")
+        return unscaled
+
+    def set_scaled_state(self, param, state_name, unscaled_state):
+        """Set the optimizer state.
+
+        If the dtype of the corresponding optimizer state is not FP32,
+        it will do scaling automatically.
+
+        Arguments:
+            param (torch.nn.Parameter): One of parameters in this optimizer.
+            state_name (string): Name of optimizer states, can be one of 'exp_avg', 'exp_avg_sq',
+                and 'master_param`.
+            unscaled_state (torch.Tensor): The original high-precision (FP32) state.
+        """
+
+        store_param_remainders = (
+            self.store_param_remainders
+            and state_name == "master_param"
+            and param.dtype == torch.bfloat16
+        )
+
+        if store_param_remainders:
+            assert unscaled_state.dtype == torch.int16
+        else:
+            assert unscaled_state.dtype == torch.float32
+        state = self.state[param]
+        if state_name not in state:
+            self._initialize_state(param, state_name, False, store_param_remainders)
+
+        # If the state is a DTensor, retrieve its local Tensor for scaling.
+        local_state = state[state_name]
+        if isinstance(local_state, DTensor):
+            local_state = local_state._local_tensor
+
+        dtype = self.name_to_dtype_map[state_name]
+        if dtype != torch.float32:
+            scale = self._scales[param]
+            self._apply_scale(state_name, unscaled_state, local_state, scale[state_name])
+        else:
+            local_state.copy_(unscaled_state)
+
+    def _initialize_state(
+        self, param, state_name, zero_buffer: bool, store_param_remainders: bool = False
+    ):
+        """Initialize one of the optimizer states according to `state_name`.
+
+        Arguments:
+            param (torch.nn.Parameter): One of parameters in this optimizer.
+            state_name (string): Name of optimizer states, can be one of 'exp_avg', 'exp_avg_sq',
+                and 'master_param`.
+            zero_buffer (bool): Whether to initialize the optimizer state with zeros.
+            store_param_remainders (bool): Store only trailing remainder bits.
+        """
+        dtype = self.name_to_dtype_map[state_name]
+        # Extract local tensor from DTensor (e.g. from FSDP2) to avoid
+        # QuantizedTensor.__torch_dispatch__ ignoring the dtype kwarg in
+        # torch.empty_like.
+        local_param = param._local_tensor if isinstance(param, DTensor) else param
+        # Handle QuantizedTensor by dequantizing first.
+        param_for_empty = (
+            local_param.dequantize() if isinstance(local_param, QuantizedTensor) else local_param
+        )
+        if store_param_remainders:
+            data = torch.zeros_like(param_for_empty, dtype=torch.int16)
+        else:
+            data = torch.empty_like(param_for_empty, dtype=dtype)
+        if zero_buffer:
+            data.zero_()
+
+        # Install the quantized or un-quantized optimizer state.
+        if dtype == torch.uint8:
+            quantizer = Float8Quantizer(
+                scale=torch.ones([1], dtype=torch.float32, device=param.device),
+                amax=torch.zeros([1], dtype=torch.float32, device=param.device),
+                fp8_dtype=tex.DType.kFloat8E4M3,
+            )
+            self.state[param][state_name] = quantizer.make_empty(data.shape)
+            self.state[param][state_name].quantize_(data.float())
+        else:
+            self.state[param][state_name] = data
+
+        # If the original Parameter was a DTensor, re-wrap the state
+        # into DTensor to support Torch DCP checkpointing.
+        if isinstance(param, DTensor):
+            self.state[param][state_name] = DTensor.from_local(
+                self.state[param][state_name],
+                device_mesh=param.device_mesh,
+                placements=param.placements,
+                shape=param.size(),
+                stride=param.stride(),
+            )
+
+        # Create scale if necessary.
+        if dtype != torch.float32:
+            if param not in self._scales:
+                self._scales[param] = {}
+            self._scales[param][state_name] = torch.ones(
+                [1], dtype=torch.float32, device=param.device
+            )
+
+    def initialize_state(self, param, store_param_remainders):
+        """Initialize optimizer states.
+
+        Arguments:
+            param (torch.nn.Parameter): One of parameters in this optimizer.
+            store_param_remainders (bool): Store trailing remainder bits.
+        """
+        self._initialize_state(param, "exp_avg", zero_buffer=True)
+        self._initialize_state(param, "exp_avg_sq", zero_buffer=True)
+        if self.master_weights:
+            self._initialize_state(
+                param,
+                "master_param",
+                zero_buffer=False,
+                store_param_remainders=store_param_remainders,
+            )
+            if not store_param_remainders:
+                # Extract local tensor from DTensor and dequantize QuantizedTensor
+                # to set scales for the optimizer state's main weights.
+                local_param = param._local_tensor if isinstance(param, DTensor) else param
+                if isinstance(local_param, QuantizedTensor):
+                    master = local_param.dequantize(dtype=torch.float32).clone().detach()
+                else:
+                    master = local_param.clone().detach().float()
+                self.set_scaled_state(param, "master_param", master)
+
+    def state_dict(self):
+        """Override the state_dict() of pytorch. Before returning the state_dict, cast all
+        non-fp32 states to fp32.
+        """
+        state_dict = super().state_dict()
+
+        groups = self.param_groups
+        saved_groups = deepcopy(state_dict["param_groups"])
+        id_map = dict(
+            zip(
+                chain.from_iterable(g["params"] for g in saved_groups),
+                chain.from_iterable(g["params"] for g in groups),
+            )
+        )
+        for k, v in state_dict["state"].items():
+            if k in id_map:
+                param = id_map[k]
+                new_v = {}
+                for name in v:
+                    new_v[name] = self.get_unscaled_state(param, name)
+                    if isinstance(param, DTensor):
+                        # Re-wrap the optimizer state as a DTensor.
+                        new_v[name] = DTensor.from_local(
+                            new_v[name],
+                            device_mesh=param.device_mesh,
+                            placements=param.placements,
+                            shape=param.size(),
+                            stride=param.stride(),
+                        )
+                state_dict["state"][k] = new_v
+
+        return state_dict
+
+    def load_state_dict(self, state_dict):
+        """Override the load_state_dict() of pytorch. Since pytorch's load_state_dict forces the
+        state to be the same dtype as param, We need to manully set the state again.
+        """
+        super().load_state_dict(state_dict)
+
+        groups = self.param_groups
+        saved_groups = deepcopy(state_dict["param_groups"])
+        id_map = dict(
+            zip(
+                chain.from_iterable(g["params"] for g in saved_groups),
+                chain.from_iterable(g["params"] for g in groups),
+            )
+        )
+        for k, v in state_dict["state"].items():
+            if k in id_map:
+                param = id_map[k]
+                self.state[param] = {}
+                for name in v:
+                    if v[name] is None:
+                        continue
+                    state = v[name]
+                    if isinstance(state, DTensor):
+                        # Un-pack the local Tensor state for set_scaled_state.
+                        state = state._local_tensor
+                    if (
+                        self.store_param_remainders
+                        and name == "master_param"
+                        and param.dtype == torch.bfloat16
+                    ):
+                        self.set_scaled_state(param, name, state)
+                        assert state.dtype == torch.int16
+                    else:
+                        self.set_scaled_state(param, name, state.float())
+
+    def step(self, closure=None, grad_scaler=None):
+        """Performs a single optimization step.
+
+        Arguments:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+            grad_scaler (torch.cuda.amp.GradScaler, optional):
+                gradient scaler (default: None)
+        """
+        loss = None
+        if closure is not None:
+            loss = closure()
+
+        for group in self.param_groups:
+            if len(group["params"]) == 0:
+                continue
+            device = group["params"][0].device
+            bias_correction = 1 if group["bias_correction"] else 0
+            beta1, beta2 = group["betas"]
+
+            # assume same step across group now to simplify things
+            # per parameter step can be easily support by making it tensor, or pass list into kernel
+            if "step" in group:
+                group["step"] += (
+                    1 if not self.capturable else (self._dummy_overflow_buf != 1).to(torch.int)
+                )
+            else:
+                group["step"] = (
+                    1 if not self.capturable else torch.tensor([1], dtype=torch.int, device=device)
+                )
+
+            # create lists for multi-tensor apply
+            p_main_of_fp8_model = []
+            p_main_of_f16_model = []
+            g_of_fp8_model = []
+            g_of_f16_model = []
+            g_of_f32_model = []
+            m_of_fp8_model = []
+            m_of_f16_model = []
+            m_of_f32_model = []
+            v_of_fp8_model = []
+            v_of_f16_model = []
+            v_of_f32_model = []
+            p_fp8_model = []
+            p_f16_model = []
+            p_f32_model = []
+            # fp8 meta
+            scales = []
+            amaxes = []
+            scale_invs = []
+
+            # Lists for scaling
+            unscaled_lists = {"exp_avg": [], "exp_avg_sq": [], "master_param": []}
+            scaled_lists = {"exp_avg": [], "exp_avg_sq": [], "master_param": []}
+            state_scales = {"exp_avg": [], "exp_avg_sq": [], "master_param": []}
+
+            # Only used when extra params include fp8 tensors. Otherwise, it doesn't matter what the out_dtype is.
+            out_dtype = tex.DType.kFloat32
+
+            has_fp16 = False
+            has_bf16 = False
+            quantized_params_to_update = []
+
+            for p in group["params"]:
+                state = self.state[p]
+
+                store_param_remainders = self.store_param_remainders and p.dtype == torch.bfloat16
+
+                # State initialization
+                if len(state) == 0:
+                    self.initialize_state(p, store_param_remainders)
+
+                if self.use_decoupled_grad:
+                    p_grad = p.decoupled_grad if hasattr(p, "decoupled_grad") else None
+                else:
+                    p_grad = p.grad
+
+                if p_grad is None:
+                    continue
+                if p_grad.data.is_sparse:
+                    raise RuntimeError("FusedAdam does not support sparse gradients.")
+
+                # Validate parameter, gradient, and state DTensor parity for the step.
+                dtensor_param = isinstance(p, DTensor)
+                assert dtensor_param == isinstance(p_grad, DTensor), (
+                    f"[FusedAdam DTensor Disparity] Parameter {p} and Gradient {p_grad} do not"
+                    " match!"
+                )
+                for name in ["exp_avg", "exp_avg_sq", "master_param"]:
+                    if name in state:
+                        assert dtensor_param == isinstance(state[name], DTensor), (
+                            f"[FusedAdam DTensor Disparity] Parameter {p} and"
+                            f" {name} {state[name]} do not match!"
+                        )
+
+                # Unscaling
+                unscaled_state = {}
+                for name in ["exp_avg", "exp_avg_sq", "master_param"]:
+                    if name in state:
+                        state_tensor = state[name]
+                        if isinstance(state_tensor, DTensor):
+                            state_tensor = state_tensor._local_tensor
+                        if name == "master_param" and store_param_remainders:
+                            unscaled_state[name] = state_tensor
+                            assert unscaled_state[name].dtype == torch.int16
+                        else:
+                            unscaled = self.get_unscaled_state(
+                                p, name, skip_unscale=self.fuse_unscale
+                            )
+                            unscaled_state[name] = unscaled
+                        if self.name_to_dtype_map[name] != torch.float32:
+                            unscaled_lists[name].append(unscaled)
+                            scaled_lists[name].append(state_tensor)
+                            state_scales[name].append(self._scales[p][name])
+                if isinstance(p, Float8Tensor) or (
+                    isinstance(p, DTensor) and isinstance(p._local_tensor, Float8Tensor)
+                ):
+                    p = p._local_tensor if isinstance(p, DTensor) else p
+                    out_dtype = p._fp8_dtype
+                    p_fp8_model.append(p._data.data)
+                    scale, amax, scale_inv = get_fp8_meta(p)
+                    scales.append(scale)
+                    amaxes.append(amax)
+                    scale_invs.append(scale_inv)
+                    if self.master_weights:
+                        p_main_of_fp8_model.append(unscaled_state["master_param"].data)
+                    g_of_fp8_model.append(p_grad.data)
+                    m_of_fp8_model.append(unscaled_state["exp_avg"])
+                    v_of_fp8_model.append(unscaled_state["exp_avg_sq"])
+                elif isinstance(p, QuantizedTensor) or (
+                    isinstance(p, DTensor) and isinstance(p._local_tensor, QuantizedTensor)
+                ):
+                    # Block-scaling quantized params (MXFP8Tensor, Float8BlockwiseQTensor,
+                    # NVFP4Tensor). Operate on FP32 master weights, requantize back after
+                    # Adam update.
+                    # Note: a fused Adam+requantize kernel (like multi_tensor_adam_fp8
+                    # for Float8Tensor) would avoid the FP32 round-trip here.
+                    if not self.master_weights:
+                        local_p = p._local_tensor if isinstance(p, DTensor) else p
+                        raise RuntimeError(
+                            "FusedAdam without master_weights does not support "
+                            f"{type(local_p).__name__} parameters. Use master_weights=True."
+                        )
+                    # Route to the FP32 master-weight path: Adam updates the FP32 master,
+                    # then we write back to the quantized param after kernels run.
+                    # Gradients may be BF16/FP16 from the backward pass — cast to FP32
+                    # to match the FP32 Adam kernel expectations.
+                    p_f32_model.append(unscaled_state["master_param"].data)
+                    g_of_f32_model.append(p_grad.data.float())
+                    m_of_f32_model.append(unscaled_state["exp_avg"])
+                    v_of_f32_model.append(unscaled_state["exp_avg_sq"])
+                    quantized_params_to_update.append((p, unscaled_state["master_param"]))
+                elif p.dtype in [torch.float16, torch.bfloat16]:
+                    has_fp16 = has_fp16 or p.dtype == torch.float16
+                    has_bf16 = has_bf16 or p.dtype == torch.bfloat16
+                    p_f16_model.append(p.data)
+                    if self.master_weights:
+                        p_main_of_f16_model.append(unscaled_state["master_param"].data)
+                    g_of_f16_model.append(p_grad.data)
+                    m_of_f16_model.append(unscaled_state["exp_avg"])
+                    v_of_f16_model.append(unscaled_state["exp_avg_sq"])
+                elif p.dtype == torch.float32:
+                    p_f32_model.append(p.data)
+                    g_of_f32_model.append(p_grad.data)
+                    m_of_f32_model.append(unscaled_state["exp_avg"])
+                    v_of_f32_model.append(unscaled_state["exp_avg_sq"])
+                else:
+                    raise RuntimeError(
+                        "FusedAdam only support model weights in fp32, fp16, bf16 and fp8"
+                    )
+
+                if self.capturable and len(p_fp8_model) > 0:
+                    raise RuntimeError(
+                        "FusedAdam does not support FP8 model weights with capturable=True."
+                    )
+
+                if self.capturable and len(quantized_params_to_update) > 0:
+                    raise RuntimeError(
+                        "FusedAdam does not support block-scaling quantized weights "
+                        "with capturable=True. The post-step quantize_() writeback "
+                        "cannot be captured in a CUDA graph."
+                    )
+
+                if has_fp16 and has_bf16:
+                    if self.store_param_remainders:
+                        raise RuntimeError(
+                            "FusedAdam doesn't support a mix of FP16/BF16 weights + Store param"
+                            " remainder."
+                        )
+
+                    # simple to add support for this, but not needed for now
+                    raise RuntimeError(
+                        "FusedAdam does not support a mix of float16 and bfloat16 model weights."
+                    )
+
+            def apply_multi_tensor_adam(adam_func, tensor_lists, inv_scale=None, out_dtype=None):
+                # Closures defined in a loop can have unexpected
+                # behavior when called outside the loop. However, this
+                # function is called in the same loop iteration as it
+                # is defined.
+                # pylint: disable=cell-var-from-loop
+                inv_scale_arg = () if inv_scale is None else (inv_scale,)
+                out_dtype_arg = () if out_dtype is None else (out_dtype,)
+                multi_tensor_applier(
+                    adam_func,
+                    self._dummy_overflow_buf,
+                    tensor_lists,
+                    group["lr"],
+                    beta1,
+                    beta2,
+                    group["eps"],
+                    group["step"],
+                    self.adam_w_mode,
+                    bias_correction,
+                    group["weight_decay"],
+                    *inv_scale_arg,
+                    *out_dtype_arg,
+                )
+
+            if self.capturable:
+                # If the optimizer is capturable, then if there's a grad scaler it works
+                # on the GPU + a different multi_tensor_applier should be called
+
+                # overflow check of gradients
+                found_inf = (
+                    grad_scaler._check_inf_per_device(self)[device]
+                    if grad_scaler is not None
+                    else torch.zeros((1,), device=device)
+                )
+                self._dummy_overflow_buf.copy_(found_inf)
+
+                # get unscale scale factor
+                scale, inv_scale = None, None
+                if grad_scaler:
+                    scale = grad_scaler._get_scale_async()
+                    inv_scale = scale.double().reciprocal().float()
+                else:
+                    scale = torch.ones((1,), device=device)
+                    inv_scale = torch.ones((1,), device=device)
+
+                if self.master_weights:
+                    if len(p_f16_model) > 0:
+                        tensor_lists = [
+                            g_of_f16_model,
+                            p_f16_model,
+                            m_of_f16_model,
+                            v_of_f16_model,
+                            p_main_of_f16_model,
+                        ]
+                        apply_multi_tensor_adam(
+                            self.multi_tensor_adam_capturable_master, tensor_lists, inv_scale
+                        )
+                    if len(p_f32_model) > 0:
+                        tensor_lists = [
+                            g_of_f32_model,
+                            p_f32_model,
+                            m_of_f32_model,
+                            v_of_f32_model,
+                        ]
+                        apply_multi_tensor_adam(
+                            self.multi_tensor_adam_capturable, tensor_lists, inv_scale
+                        )
+                else:
+                    if len(p_f16_model) > 0:
+                        tensor_lists = [g_of_f16_model, p_f16_model, m_of_f16_model, v_of_f16_model]
+                        apply_multi_tensor_adam(
+                            self.multi_tensor_adam_capturable, tensor_lists, inv_scale
+                        )
+                    if len(p_f32_model) > 0:
+                        tensor_lists = [g_of_f32_model, p_f32_model, m_of_f32_model, v_of_f32_model]
+                        apply_multi_tensor_adam(
+                            self.multi_tensor_adam_capturable, tensor_lists, inv_scale
+                        )
+
+            elif self.master_weights:  # and self.capturable=False
+                if len(p_f16_model) > 0:
+                    tensor_lists = [
+                        g_of_f16_model,
+                        p_f16_model,
+                        m_of_f16_model,
+                        v_of_f16_model,
+                        p_main_of_f16_model,
+                    ]
+                    if self.store_param_remainders and has_bf16 and not has_fp16:
+                        # When you have BF16 params and need FP32 master params, you can reconstruct
+                        # the FP32 master params with BF16 params + int16 remainders
+                        apply_multi_tensor_adam(
+                            self.multi_tensor_adam_param_remainder, tensor_lists
+                        )
+                    else:
+                        apply_multi_tensor_adam(self.multi_tensor_adam, tensor_lists)
+                if len(p_fp8_model) > 0:
+                    tensor_lists = [
+                        g_of_fp8_model,
+                        p_fp8_model,
+                        m_of_fp8_model,
+                        v_of_fp8_model,
+                        p_main_of_fp8_model,
+                        scales,
+                        amaxes,
+                        scale_invs,
+                    ]
+                    apply_multi_tensor_adam(self.multi_tensor_adam_fp8, tensor_lists, out_dtype)
+                if len(p_f32_model) > 0:
+                    tensor_lists = [
+                        g_of_f32_model,
+                        p_f32_model,
+                        m_of_f32_model,
+                        v_of_f32_model,
+                    ]
+                    apply_multi_tensor_adam(self.multi_tensor_adam, tensor_lists)
+            else:  # self.master_weights=False and self.capturable=False
+                if len(p_f16_model) > 0:
+                    tensor_lists = [g_of_f16_model, p_f16_model, m_of_f16_model, v_of_f16_model]
+                    apply_multi_tensor_adam(self.multi_tensor_adam, tensor_lists)
+                if len(p_f32_model) > 0:
+                    tensor_lists = [g_of_f32_model, p_f32_model, m_of_f32_model, v_of_f32_model]
+                    apply_multi_tensor_adam(self.multi_tensor_adam, tensor_lists)
+
+            # Write updated FP32 master weights back to quantized parameters
+            for qt_param, master_w in quantized_params_to_update:
+                local_p = qt_param._local_tensor if isinstance(qt_param, DTensor) else qt_param
+                local_p.quantize_(master_w.data)
+
+            # Scaling
+            for name in ["exp_avg", "exp_avg_sq", "master_param"]:
+                if self.fuse_unscale and name in ["exp_avg", "exp_avg_sq"]:
+                    # When fused_unscale is True, the scaling is fused into the Adam kernel.
+                    # The momentums are updated inplace, so we don't need to scale here.
+                    continue
+                if len(unscaled_lists[name]) > 0:
+                    for unscaled, scaled, scale in zip(
+                        unscaled_lists[name], scaled_lists[name], state_scales[name]
+                    ):
+                        self._apply_scale(name, unscaled, scaled, scale)
+
+            # Try to reclaim the temporary fp32 buffers.
+            del unscaled_lists
+
+        return loss

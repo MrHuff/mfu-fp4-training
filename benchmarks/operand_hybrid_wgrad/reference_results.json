@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "method": "exact-production-mxfp4-paired-wgrad-panel-replay",
+  "checkpoint_step": 28000,
+  "layers": [12, 16, 31],
+  "rows": 2048,
+  "panel_columns": 256,
+  "panels_per_layer": 4,
+  "quantizer_sha256": "d4d4b116b703ef7ffc1986934362e7be1d6861bed1520878b9a5a1b79a420d02",
+  "paired_exact_contraction_relative_l2_max": 4.3136904250008523e-07,
+  "arms": {
+    "h16_plain": {
+      "layer_12": {
+        "x_operand_relative_l2": 0.11210616850974793,
+        "dy_operand_relative_l2": 0.1180295552968998,
+        "wgrad_panel_relative_l2_mean": 0.16231266622091448
+      },
+      "layer_16": {
+        "x_operand_relative_l2": 0.11504942269444145,
+        "dy_operand_relative_l2": 0.11747533676211677,
+        "wgrad_panel_relative_l2_mean": 0.15021485055458117
+      },
+      "layer_31": {
+        "x_operand_relative_l2": 0.12704648793210896,
+        "dy_operand_relative_l2": 0.11662815545346235,
+        "wgrad_panel_relative_l2_mean": 0.17040986535241442
+      },
+      "mean_of_layer_wgrad_means": 0.16097912737597
+    },
+    "h32_plain": {
+      "layer_12": {
+        "x_operand_relative_l2": 0.1087609137382354,
+        "dy_operand_relative_l2": 0.1135421232458505,
+        "wgrad_panel_relative_l2_mean": 0.16050867686191858
+      },
+      "layer_16": {
+        "x_operand_relative_l2": 0.11162802187142475,
+        "dy_operand_relative_l2": 0.1142408547763227,
+        "wgrad_panel_relative_l2_mean": 0.14802795961965937
+      },
+      "layer_31": {
+        "x_operand_relative_l2": 0.1302317440305864,
+        "dy_operand_relative_l2": 0.11445752634764719,
+        "wgrad_panel_relative_l2_mean": 0.1735318182778826
+      },
+      "mean_of_layer_wgrad_means": 0.16068948491982019
+    },
+    "h32_fixed_0x2817_repeated": {
+      "layer_12": {
+        "x_operand_relative_l2": 0.10811568795086912,
+        "dy_operand_relative_l2": 0.11328240718717543,
+        "wgrad_panel_relative_l2_mean": 0.15761496041955525
+      },
+      "layer_16": {
+        "x_operand_relative_l2": 0.10958157161017731,
+        "dy_operand_relative_l2": 0.11390143880422082,
+        "wgrad_panel_relative_l2_mean": 0.1434254198968985
+      },
+      "layer_31": {
+        "x_operand_relative_l2": 0.11426145778034319,
+        "dy_operand_relative_l2": 0.11450167175250793,
+        "wgrad_panel_relative_l2_mean": 0.1623142092994823
+      },
+      "mean_of_layer_wgrad_means": 0.15445152987197866
+    }
+  },
+  "relative_improvement_fixed_h32_vs_plain_h16": 0.040549340839362416,
+  "relative_improvement_plain_h32_vs_plain_h16": 0.0017992547286789123
+}

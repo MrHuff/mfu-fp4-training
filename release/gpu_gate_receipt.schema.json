@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MrHuff/mfu-fp4-training/blob/main/release/gpu_gate_receipt.schema.json",
+  "title": "MFU FP4 single-GPU release-gate receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "observed_utc",
+    "source_scope",
+    "environment",
+    "kernel_builds",
+    "abi",
+    "numerics",
+    "behavior_gates",
+    "commands",
+    "not_claimed"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"const": "pass_on_matching_host"},
+    "observed_utc": {"type": "string", "format": "date"},
+    "source_scope": {"type": "object"},
+    "environment": {"type": "object"},
+    "kernel_builds": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {"type": "object"}
+    },
+    "abi": {"type": "object"},
+    "numerics": {"type": "object"},
+    "behavior_gates": {"type": "object"},
+    "commands": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "not_claimed": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"type": "string"}
+    }
+  }
+}

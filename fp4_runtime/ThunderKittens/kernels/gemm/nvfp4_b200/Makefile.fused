@@ -1,0 +1,10 @@
+GPU := B200
+
+# PyTorch extension mode
+SRC := nvfp4_fused_gemm.cu
+OUT := _C_fused$(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+CMD := python test_fused_gemm.py
+NVCCFLAGS := -DTORCH_COMPILE
+CONFIG := pytorch
+
+include ../../common.mk

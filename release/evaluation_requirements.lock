@@ -1,0 +1,43 @@
+# Hash-locked evaluation-only overlay for Linux aarch64 / Python 3.12.
+# Install into a virtual environment with --system-site-packages so the
+# digest-pinned NVIDIA PyTorch/CUDA stack is not replaced.
+accelerate==1.7.0 \
+    --hash=sha256:cf57165cca28769c6cf2650812371c81b18e05743dfa3c748524b1bb4f2b272f
+chardet==5.2.0 \
+    --hash=sha256:e1cf59446890a00105fe7b7912492ea04b6e6f06d4b742b2c788469e34c82970
+colorama==0.4.6 \
+    --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
+dataproperty==1.1.1 \
+    --hash=sha256:cf026aa002dbd6c57c619ec6741ffd61ae7bf2f20481951d8af2dff44480340e
+evaluate==0.4.6 \
+    --hash=sha256:bca85bc294f338377b7ac2f861e21c308b11b2a285f510d7d5394d5df437db29
+lm-eval==0.4.12 \
+    --hash=sha256:02971ff68284dd14cfa7fce9310a58452c4162e8d413ba96aa7988a0ff9352ef
+mbstrdecoder==1.1.5 \
+    --hash=sha256:4a50fe113d4abecfd86e8f716b2e413cce03d63af83ec3c7cdbe81dec0e519ed
+nltk==3.10.3 \
+    --hash=sha256:ff9598a8e20518ee0d557745890cc4435b9578489e2dcbc69c4f81fa060caf7c
+pathvalidate==3.3.1 \
+    --hash=sha256:5263baab691f8e1af96092fa5137ee17df5bdfbd6cff1fcac4d6ef4bc2e1735f
+portalocker==4.3.0 \
+    --hash=sha256:aa91709ccfc322b8225171392d64a2f9fc833f15f5ab741cfba6d3fba285ce31
+pytablewriter==1.2.1 \
+    --hash=sha256:e906ff7ff5151d70a5f66e0f7b75642a7f2dce8d893c265b79cc9cf6bc04ddb4
+rouge-score==0.1.2 \
+    --hash=sha256:c7d4da2683e68c9abf0135ef915d63a46643666f848e558a1b9f7ead17ff0f04
+sacrebleu==2.6.0 \
+    --hash=sha256:3edc1531575cfe4ad04ce53491a9307e234af1c3f805a1f491cbec844229a8a8
+safetensors==0.5.3 \
+    --hash=sha256:11bce6164887cd491ca75c2326a113ba934be596e22b28b1742ce27b1d076467
+sqlitedict==2.1.0 \
+    --hash=sha256:03d9cfb96d602996f1d4c2db2856f1224b96a9c431bdd16e78032a72940f9e8c
+tabledata==1.3.5 \
+    --hash=sha256:a1e57afc4767b51bef551114c0df31f205d712dbb75e3caf9be7834a79f23136
+tcolorpy==0.1.7 \
+    --hash=sha256:26a59d52027e175a37e0aba72efc99dda43f074db71f55b316d3de37d3251378
+tokenizers==0.21.1 \
+    --hash=sha256:28da6b72d4fb14ee200a1bd386ff74ade8992d7f725f2bde2c495a9a98cf4d9f
+typepy==1.3.5 \
+    --hash=sha256:de361b59609c7503efc2edbe9d7a4e053ae71307bf90ae1678ec4d6bcd807922
+word2number==1.1 \
+    --hash=sha256:70e27a5d387f67b04c71fbb7621c05930b19bfd26efd6851e6e0f9969dcde7d0

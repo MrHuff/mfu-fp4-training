@@ -1,0 +1,38 @@
+\section{Low-Precision Output Head: Negative Result}
+\label{app:output-head}
+
+This appendix records an engineering screen for which the exact low-precision
+forward format was not preserved. The vocabulary projection has a large
+forward GEMM and is therefore an attractive FP4 target. In the complete
+trainer, however, the head also owns cross entropy, the hidden-state gradient,
+the weight gradient, quantization, and saved-tensor lifetime. Accelerating one
+GEMM did not accelerate that whole boundary.
+
+\begin{table}[H]
+  \centering
+  \caption{Historical whole-trainer output-head screen. Deltas are paired
+  within one experiment. The complete profiler metadata was not preserved, so
+  rates are rounded and are not compared with the primary performance panel.}
+  \label{tab:head-negative}
+  \begin{tabularx}{\textwidth}{YrrY}
+    \toprule
+    Forward / $d\mathrm{Hidden}$ / $dW$ & Tokens/s/GPU & Difference & Outcome \\
+    \midrule
+    BF16 / BF16 / BF16 & $\sim$34.00K & baseline & BF16 control \\
+    lowp$^{\dagger}$ / BF16 / BF16 & $\sim$33.95K & $\sim-0.16\%$ & Loss differed from control \\
+    lowp$^{\dagger}$ / BF16 / MXFP8 & $\sim$33.91K & $\sim-0.27\%$ & Loss and gradients differed \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+$^{\dagger}$The experiment record preserves the backward choices and paired
+rates but not the exact low-precision forward format. We therefore retain the
+literal ``lowp'' label rather than assigning a more specific format after the
+fact.
+
+Both selective low-precision variants are slower than their matched BF16
+control. The preserved record also says that neither reproduced the BF16
+control loss, and that the MXFP8-$dW$ arm additionally changed gradients; it
+does not retain a publication-ready error magnitude, so we do not rank the
+size of those numerical differences. These results support the selected
+design: a BF16 output projection with compiled CE.

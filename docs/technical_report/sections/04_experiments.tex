@@ -1,0 +1,190 @@
+\section{Experimental Setup}
+
+\subsection{Model, data, and training horizon}
+
+The main workload is an 8B-parameter Llama-family decoder with RMSNorm,
+grouped-query attention, rotary position embeddings (RoPE), and a gated
+feed-forward network \cite{dubey2024llama3}. The sequence length is 8,192 and
+the global batch is 512 sequences, or 4,194,304 tokens per update. A
+160B-token run ends at step 38,147. Unless stated otherwise, the named
+low-precision route applies to every body linear in all 32 transformer blocks.
+
+All main custom routes use a BF16 output projection followed by
+Inductor-compiled regular cross entropy. The optimizer is AdamW with a
+2,000-step linear warmup to a peak learning rate of $3\times10^{-4}$; the rate
+remains constant after warmup over the reported horizon. Training losses are
+compared at matched optimizer steps. Each long-run recipe is represented by
+one trajectory, so the comparisons do not estimate seed-to-seed variation.
+Table~\ref{tab:base-training-recipe} summarizes the shared configuration; the
+appendix records execution-specific details.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption{Shared Llama-8B training configuration.}
+  \label{tab:base-training-recipe}
+  \begin{tabularx}{\textwidth}{@{}lY@{}}
+    \toprule
+    Field & Effective contract \\
+    \midrule
+    Model & 32 blocks; width 4,096; FFN 14,336; 32 Q heads; 8 KV heads; head dimension 128; vocabulary 128,256 \\
+    Position / norm & Llama-3.1 RoPE with base $500{,}000$, $8\times$ scaling, low/high frequency factors 1 and 4, and original length 8,192; RMSNorm $\epsilon=10^{-5}$ \\
+    Data / tokenizer & Shuffled OLMo Mix 1124 \cite{olmo2025olmo2}; Meta-Llama-3.1-8B tokenizer \\
+    Optimizer & Fused AdamW, $(\beta_1,\beta_2)=(0.9,0.95)$, $\epsilon=10^{-8}$, weight decay 0.1, global gradient-norm clip 1.0 \\
+    LR schedule & 2,000-step linear warmup to $3\times10^{-4}$; constant thereafter over the reported horizon \\
+    Batch / horizon & Global batch 512; 4,194,304 tokens/update; 38,147 updates; 160,000,114,688 scheduled tokens \\
+    State / output & BF16 parameters and non-FP4 operations; FP32 master/optimizer state; BF16 output projection; execution-specific regular CE \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Recipe ledger}
+
+Tables~\ref{tab:recipe-ledger} and~\ref{tab:recipe-state-ledger} state the
+numerical recipe for every reported route. ``Row SR'' means stochastic
+rounding only for the row-oriented gradient consumed by Dgrad. Activations,
+weights, scales, and the Wgrad-oriented gradient remain deterministic in those
+custom routes. A Wgrad Hadamard transform always acts on $X$ and $dY$ as a
+pair; it never transforms the stored weight.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption{Per-contraction numerical recipe. 2D16 and 2D32 denote one
+  orientation-consistent $16\times16$ or $32\times32$ weight encoding.
+  NV denotes global NVFP4, LC denotes CTA-local NVFP4, and MX denotes MXFP4.
+  The 27/5 hybrid changes format by depth; the operand hybrid changes it by
+  contraction inside every block.}
+  \label{tab:recipe-ledger}
+  \begin{tabularx}{\textwidth}{@{}YYYYYY@{}}
+    \toprule
+    Route & Body assignment & Fprop & Dgrad & Wgrad & Weight representation(s) \\
+    \midrule
+    BF16 & blocks 1--32 & BF16 & BF16 & BF16 & BF16 master \\
+    TE-native \nvfp{} in all blocks & blocks 1--32 & global NV & global NV & global NV + TE-managed H16 & TE 2D16 \\
+    TE \nvfp{} with four final BF16 blocks & NV blocks 1--28; BF16 29--32 & NV 1--28; BF16 29--32 & NV 1--28; BF16 29--32 & NV+TE-managed H16 1--28; BF16 29--32 & TE 2D16 / BF16 \\
+    Global \nvfp{} v5 & blocks 1--32 & global NV & global NV & global NV & custom native 2D16 \\
+    \mxfp{} + row-SR & blocks 1--32 & MX & MX & MX & custom 2D32 \\
+    \localcta{}-v4 & blocks 1--32 & localCTA & localCTA & localCTA & custom 2D16 \\
+    \localcta{}+fixed H16 & blocks 1--32 & localCTA & localCTA & localCTA + paired fixed-sign H16 & custom 2D16 \\
+    27/5 depth hybrid & LC blocks 1--27; MX 28--32 & LC 1--27; MX 28--32 & LC 1--27; MX 28--32 & LC 1--27; MX 28--32 & LC 2D16; MX 2D32 \\
+    \mxfp{}+row-SR+fixed H32 & blocks 1--32 & MX & MX & MX + paired fixed-sign H32 & custom 2D32 \\
+    Operand hybrid (plain H16) & every block & MX & localCTA & MX + paired plain H16 & MX 2D32 + LC 2D16 encodings \\
+    Operand hybrid (fixed H32) & every block & MX & localCTA & MX + paired fixed-sign H32 & MX 2D32 + LC 2D16 encodings \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \caption{Rounding and precision policy. Every row uses a BF16 output
+  projection. The machine-readable ledger records the full stochastic
+  namespaces and the recovered seed metadata.}
+  \label{tab:recipe-state-ledger}
+  \begin{tabularx}{\textwidth}{@{}lYYY@{}}
+    \toprule
+    Route & Gradient rounding & Hadamard contract & BF16 body / head \\
+    \midrule
+    BF16 & n/a & none & all / BF16 \\
+    TE-native \nvfp{} in all blocks & TE gradient SR & TE-managed H16 on Wgrad & none / BF16 \\
+    TE \nvfp{} + four final BF16 blocks & TE gradient SR & TE-managed H16 on NV Wgrad & last four / BF16 \\
+    Global \nvfp{} v5 & row data SR & none & none / BF16 \\
+    \mxfp{} + row-SR & row data SR & none & none / BF16 \\
+    \localcta{}-v4 & row data SR & none & none / BF16 \\
+    \localcta{}+fixed H16 & row data SR & paired fixed-sign H16 on Wgrad $X,dY$ & none / BF16 \\
+    27/5 depth hybrid & row data SR in both & none & none / BF16 \\
+    \mxfp{}+row-SR+fixed H32 & row data SR & paired fixed-sign H32 on Wgrad $X,dY$ & none / BF16 \\
+    Operand hybrid (plain H16) & LC row data SR & plain H16 ($D=I$) on Wgrad & none / BF16 \\
+    Operand hybrid (fixed H32) & LC row data SR & paired fixed-sign H32 on Wgrad $X,dY$ & none / BF16 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+\FloatBarrier
+
+``TE-managed'' means that Transformer Engine controls the H16 transform. We do
+not assign that route the stronger fixed-sign contract used by the custom
+kernels.
+
+All custom training routes retain BF16 parameters and FP32 optimizer state. The final column
+in Table~\ref{tab:recipe-ledger} describes the transient FP4 representation
+consumed by Tensor Cores. The operand hybrid emits two encodings from one BF16
+weight: MX 2D32 for Fprop and CTA-local 2D16 for Dgrad. Wgrad does not consume
+the stored weight; it quantizes $X$ and $dY$ with MXFP4. This is a
+deliberate contraction-specific recipe rather than two layouts of one shared
+FP4 weight.
+
+Appendix~\ref{app:reproducibility} gives the full experiment-disposition
+ledger and the checkpoint criteria for each result panel.
+
+\subsection{End-to-end performance measurements}
+
+The performance probes use the same accelerator type, sequence length, global
+batch, seed, BF16 output projection, compiled CE, warmup rule, metric window,
+and distributed telemetry. Each route uses its selected local batch,
+activation-checkpoint policy, and distributed schedule, so the panel compares
+complete end-to-end configurations rather than one isolated implementation
+change. Tables report cross-device aggregates. Local batch (LB) and gradient
+accumulation (GA) remain explicit because they affect occupancy, memory
+lifetime, and the exposed output-layer cost.
+
+We use the dense-model training FLOP convention implemented by TorchTitan. For
+total parameter count $N$, embedding parameter count
+$N_{\mathrm{emb}}$, number of layers $L$, query-head count $H$, head dimension
+$d_h$, and sequence length $S$, it gives
+\begin{equation}
+  F_{\mathrm{model/token}}
+  =6\bigl(N-N_{\mathrm{emb}}\bigr)+12LHd_hS.
+  \label{eq:model-flops}
+\end{equation}
+The first term counts the forward and backward dense parameter operations;
+the second counts the attention contractions without charging recomputation.
+Here $N=8{,}030{,}261{,}248$, $N_{\mathrm{emb}}=525{,}336{,}576$, $L=32$,
+$H=32$, $d_h=128$, and $S=8{,}192$, giving
+$F_{\mathrm{model/token}}=57{,}914{,}449{,}920$ FLOPs/token.
+
+For a route with per-device token rate $R$, we report BF16 model FLOP
+utilization (BF16 MFU):
+\begin{equation}
+  \mathrm{MFU}_{\mathrm{BF16}}=100\frac{F_{\mathrm{model/token}}R}
+  {F_{\mathrm{peak,BF16}}},
+  \label{eq:mfu}
+\end{equation}
+using Equation~\ref{eq:model-flops} and the hardware's maximum dense BF16
+Tensor Core throughput. NVIDIA specifies 360 PFLOP/s of sparse FP16/BF16
+throughput for a 72-GPU GB200 NVL72 and states that dense throughput is half
+the sparse value. Dividing by 72 GPUs and by two gives the maximum dense BF16
+throughput used here, $F_{\mathrm{peak,BF16}}=2.5\times10^{15}$ FLOP/s/GPU,
+or 2,500 BF16 TFLOP/s/GPU \cite{nvidia2025blackwell}. Tokens/s/GPU is the
+directly observed metric. We recompute BF16 MFU from each unrounded throughput
+aggregate with this peak. For an FP4 route, BF16 MFU is BF16-equivalent model
+work divided by the BF16 peak; it measures effective training throughput, not
+literal FP4 Tensor Core occupancy. It can therefore exceed 100\%.
+Recomputing from the rounded token rate printed in a table can differ in the
+last decimal place.
+
+\subsection{Training and checkpoint evaluation}
+
+Training curves use exact logged optimizer steps. Smoothed curves use an
+exponential moving average only for visualization. Custom-route endpoints are
+raw observations; Appendix~\ref{app:reproducibility} defines the BF16 and
+TE-native reference curves.
+
+Validation uses a fixed external stream constructed from an 82/18 DataComp-LM
+(DCLM) and OLMo-without-DCLM source mixture
+\cite{li2024datacomplm,olmo2025olmo2}. It contains 768
+sequences and 6,291,456 next-token targets. Documents are deduplicated, mixed,
+and shuffled before packing so a device rank cannot represent only one source
+or cursor range. Every checkpoint consumes the same tokenized sequences. We
+call this an external validation stream rather than a held-out split because
+zero overlap with every historical training trajectory cannot be proven.
+Before route comparison, converted and native evaluation must agree at the
+full 8,192-token context, and a late BF16 checkpoint must improve over an early
+one by more than five sequence-level standard errors.
+
+Every downstream comparison uses the literal step-38,000 checkpoint and BF16
+inference. Converted models must match TorchTitan's RoPE and RMSNorm semantics
+before scoring. The evaluation panel follows the
+NVIDIA-aligned subset of MMLU, HellaSwag, WinoGrande, and ARC-Challenge
+\cite{hendrycks2021mmlu,gu2024olmes,nvidia2025nvfp4}. Shot counts and reported metrics appear with the
+results.

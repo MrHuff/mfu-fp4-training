@@ -1,0 +1,10 @@
+route,body_recipe,output_head,seed,last_observed_step,loss,grad_norm,matched_bf16_loss,loss_gap_percent,status
+BF16 historical control,BF16,BF16 regular CE,not recorded,38140,2.3646368980407715,0.0618108659982681,2.3646368980407715,0.0,complete historical comparator
+TE-native NVFP4,TE NVFP4,BF16 regular CE,not recorded,38140,2.396352767944336,0.0483382567763328,2.3646368980407715,1.3412575068012744,complete historical comparator
+MXFP4-v4 + RHT,MXFP4 with row-oriented gradient SR and fixed-sign column RHT,BF16 regular CE,42,38140,2.414578437805176,0.1614232063293457,2.3646368980407715,2.112017274440044,training complete; exact final checkpoint sealed
+MXFP4-v4 + row-SR,MXFP4 with row-oriented gradient SR,BF16 regular CE,42,38140,2.519150495529175,0.0763220340013504,2.3646368980407715,6.534347730783785,complete
+localCTA-v4 repaired,CTA-local NVFP4 with row-oriented gradient SR,BF16 regular CE,42,38140,2.417707920074463,0.06877990812063217,2.3646368980407715,2.2443624252697525,complete
+Pure v5,global-v5 NVFP4 with SR,BF16 regular CE,42,38140,2.4282,0.0589,2.3646368980407715,2.6880702915485166,scientifically complete; validator rejected after training
+localCTA/MXFP4 hybrid,localCTA layers with MXFP4 tail,BF16 regular CE,42,38140,2.4768,0.0721,2.3646368980407715,4.743354129852317,scientifically complete; final resumable checkpoint not proven
+v5/MXFP4 hybrid,global-v5 layers with MXFP4 tail,BF16 regular CE,42,38140,6.7490553855896,0.7242422699928284,2.3646368980407715,185.41614110739596,complete trajectory; numerically diverged
+TE F0L4,TE NVFP4 with final four transformer blocks in BF16,BF16 regular CE,42,4910,2.7927,0.1330,,,running; excluded from finished comparison

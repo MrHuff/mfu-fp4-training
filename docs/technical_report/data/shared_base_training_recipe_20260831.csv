@@ -1,0 +1,19 @@
+recipe_id,field,value,evidence_status
+llama8b-160b-common-v1,model,Llama-3.1 8B decoder; 32 transformer blocks,verified
+llama8b-160b-common-v1,hidden_and_ffn_dimensions,4096 hidden; 14336 FFN,verified
+llama8b-160b-common-v1,attention_dimensions,32 query heads; 8 key/value heads; head dimension 128,verified
+llama8b-160b-common-v1,vocabulary_and_position,128256 vocabulary; RoPE theta 500000 with Llama-3.1 scaling factor 8 low-frequency factor 1 high-frequency factor 4 original context 8192; RMSNorm epsilon 1e-5,verified
+llama8b-160b-common-v1,tokenizer,Meta-Llama-3.1-8B tokenizer assets; base vocabulary 128000 plus 256 added IDs; BOS 128000; EOS 128001; no universal hub revision recovered for every historical route,verified for promoted seed-42 capsules; historical revision not universally recovered
+llama8b-160b-common-v1,corpus_loader,cluster-staged shuffled OLMo Mix 1124 exposed by LBT alias dolma; streaming Arrow train split with contiguous node sharding,verified for promoted seed-42 capsules
+llama8b-160b-common-v1,exact_data_order,exact data order is a caller-supplied external input and is not published,not recovered
+llama8b-160b-common-v1,sequence_and_batch,sequence 8192; global batch 512 sequences; 4194304 tokens per update,verified
+llama8b-160b-common-v1,training_horizon,38147 optimizer updates; 160000114688 scheduled tokens,verified
+llama8b-160b-common-v1,optimizer,fused AdamW; beta1 0.9; beta2 0.95; epsilon 1e-8; weight decay 0.1,verified in common config for promoted seed-42 custom capsules; historical BF16/TE pin not individually recovered
+llama8b-160b-common-v1,gradient_clipping,global max norm 1.0,verified in common config; no long-run override
+llama8b-160b-common-v1,learning_rate,peak 3e-4; 2000-update warmup,verified effective runner override
+llama8b-160b-common-v1,decay_schedule,WSD: 2000-step linear warmup; 45685 stable steps; cosine decay begins at step 47685 for 23842 steps; minimum LR factor 0.01; scheduler horizon 71526; all 38147-step runs stop before decay,verified from the pinned scheduler implementation and effective runner override
+llama8b-160b-common-v1,parameter_state,BF16 model compute with FP32 master parameters and optimizer state,verified for promoted routes
+llama8b-160b-common-v1,output_boundary,ordinary BF16 output linear; loss implementation recorded per execution,verified
+llama8b-160b-common-v1,seed,route-specific; seed 42 for promoted runs; historical BF16 and TE-native seed not recovered,verified or explicitly unrecovered
+llama8b-160b-common-v1,distributed_geometry,"world size, local batch, gradient accumulation, FSDP/HSDP topology, and activation-checkpoint option are execution-specific",route-specific
+llama8b-160b-common-v1,scope,shared numerical base for the published Llama-8B experiments,explicit scope

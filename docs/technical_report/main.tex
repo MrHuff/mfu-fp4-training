@@ -1,0 +1,87 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{array,booktabs,tabularx}
+\usepackage{adjustbox}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\usepackage{placeins}
+\usepackage{public_report}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.14}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title{Format-Aware Fusion for Fast FP4 Llama Pretraining}
+\reportsubtitle{Native MXFP4 and NVFP4 Training on NVIDIA Blackwell}
+\author{Robert Hu}
+\date{September 2026\\[3mm]
+\small \textcopyright{} 2026 Robert Hu. Original manuscript and figures
+licensed under \href{https://creativecommons.org/licenses/by/4.0/}{CC BY 4.0}.}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=ReportInk,
+  citecolor=ReportAccentDark,
+  urlcolor=ReportAccentDark,
+  pdftitle={Format-Aware Fusion for Fast FP4 Llama Pretraining},
+  pdfauthor={Robert Hu},
+  pdfsubject={Native FP4 training systems for Llama on NVIDIA Blackwell},
+  pdfkeywords={FP4 training, MXFP4, NVFP4, CUDA fusion, stochastic rounding, Llama}
+}
+
+\newcommand{\mxfp}{MXFP4}
+\newcommand{\nvfp}{NVFP4}
+\newcommand{\localcta}{CTA-local NVFP4}
+\newcommand{\tk}{ThunderKittens}
+
+\begin{document}
+
+\maketitle
+\input{sections/abstract.tex}
+
+\input{sections/01_summary.tex}
+\input{sections/02_formats.tex}
+\input{sections/03_method.tex}
+\input{sections/04_experiments.tex}
+\input{sections/05_results.tex}
+\input{sections/06_discussion.tex}
+\input{sections/07_conclusion.tex}
+
+\section*{Code and Data Availability}
+
+Code, pinned kernel sources, experiment recipes, and figure builders are
+available at \url{https://github.com/MrHuff/mfu-fp4-training}. Project-authored
+software is released under the MIT License. The original manuscript and
+figures are released under CC BY 4.0; included third-party components retain
+their own terms. Training corpora, tokenizer assets, model checkpoints, and
+checkpoint metadata are not redistributed. The repository instead provides
+hash-bound input schemas and the public recipes needed to bind authorized
+local copies without recording credentials or private storage locations.
+
+\section*{Generative-AI Disclosure}
+
+OpenAI Codex provided substantial assistance with code development, experiment
+orchestration, analysis, programmatic figure generation, and drafting and
+editing this report. The system is not an author. The human author reviewed and
+verified the code, experiments, numerical results, figures, citations, and
+text and takes full responsibility for the content.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\input{appendices/a_implementation.tex}
+\input{appendices/b_output_head.tex}
+\input{appendices/c_reproducibility.tex}
+
+\end{document}

@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "status": "blocked_staging_not_public",
+  "purpose": "cold_start_training_reproduction_and_continuation",
+  "authoritative_date_utc": "2026-09-03",
+  "canonical_public_repository": "https://github.com/MrHuff/mfu-fp4-training",
+  "publication": {
+    "history_contract": "new_scrubbed_single_commit_export",
+    "release_commit": null,
+    "release_tree": null,
+    "history_secret_scan_required": true,
+    "independent_secret_scan_required": true,
+    "license_scope_authorized": true,
+    "must_not_publish_current_history": true
+  },
+  "training_source": {
+    "layout": "TorchTitan extension",
+    "route_complete_commit": "175d2af248e8ee575805aca57875cda0ee7ae51f",
+    "route_complete_tree": "eb495e7745fb05ca18c096d2ed961e9a7d128a58",
+    "required_in_release_history": true,
+    "public_release_commit": null
+  },
+  "vendored_components": [
+    {
+      "id": "torchtitan",
+      "path": "torchtitan_submodule",
+      "url": "https://github.com/pytorch/torchtitan.git",
+      "commit": "20b3de7585696c327bd5aa9f9627f0300abdbf9d"
+    },
+    {
+      "id": "transformer_engine",
+      "path": "TransformerEngine",
+      "url": "https://github.com/graphcore-research/TransformerEngine.git",
+      "commit": "06b44b8eff1f81f33c2a378515cf05fe2fade3cb"
+    },
+    {
+      "id": "fp4_runtime_curated",
+      "path": "fp4_runtime",
+      "url": "https://github.com/graphcore-research/fp4_matmul.git",
+      "commit": "301ab63d354a4f8c24b7c0da499736e3f14b7400",
+      "tree": "903fc604ec0c419a30351c609a056698fc8d3684"
+    },
+    {
+      "id": "thunderkittens",
+      "path": "fp4_runtime/ThunderKittens",
+      "url": "https://github.com/MrHuff/ThunderKittens.git",
+      "commit": "2dd00a943309984ab7c1434a5614f2a63efd933d"
+    }
+  ],
+  "external_optional_components": [],
+  "curated_runtime_inventory": [
+    {
+      "path": "TK_quantisation",
+      "role": "all MXFP4, NVFP4, and localCTA quantizer generations",
+      "support": "current routes plus labeled historical reference"
+    },
+    {
+      "path": "fused_ops",
+      "role": "fused activation and quantization operations used by supported routes",
+      "support": "supported"
+    },
+    {
+      "path": "fp4_cce_TK",
+      "role": "TK low-precision-output-head experiments",
+      "support": "historical_reference_unsupported"
+    },
+    {
+      "path": "ThunderKittens",
+      "role": "GEMM kernels and common headers",
+      "support": "supported and development dependency"
+    }
+  ],
+  "excluded_runtime_components": [
+    "SageAttention",
+    "top-level CUTLASS",
+    "FlashAttention",
+    "QUTLASS",
+    "qutlass-based fp4_cross_entropy",
+    "FA4 and tk_fa4",
+    "Mamba CUDA"
+  ],
+  "production_kernel_builds": [
+    {
+      "id": "mxfp4_v4_quantizer",
+      "directory": "fp4_runtime/TK_quantisation/mxfp4_v4",
+      "target": "all",
+      "architecture": "sm_100a"
+    },
+    {
+      "id": "localcta_v4_quantizer",
+      "directory": "fp4_runtime/TK_quantisation/nvfp4_CTA_local_v4",
+      "target": "all",
+      "architecture": "sm_100a"
+    },
+    {
+      "id": "global_nvfp4_v5_quantizer",
+      "directory": "fp4_runtime/TK_quantisation/nvfp4_v5",
+      "target": "all",
+      "architecture": "sm_100a"
+    },
+    {
+      "id": "mxfp4_gemm",
+      "directory": "fp4_runtime/ThunderKittens/kernels/gemm/mxfp4_gb200",
+      "target": "all GPU=B200",
+      "architecture": "sm_100a"
+    },
+    {
+      "id": "nvfp4_gemm",
+      "directory": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200",
+      "target": "all GPU=B200",
+      "architecture": "sm_100a"
+    },
+    {
+      "id": "localcta_v3_gemm",
+      "directory": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue_v3",
+      "target": "all GPU=B200",
+      "architecture": "sm_100a"
+    }
+  ],
+  "environment": {
+    "contract": "release/container_dependency_lock.json",
+    "container_reference": "nvcr.io/nvidia/pytorch:25.10-py3@sha256:42263b2424fc237b34c4fc4a91c30d603c57eed36e37d31ff6d9a4f1f801edee",
+    "python": "3.12.3",
+    "pytorch": "2.9.0a0+145a3a7bda.nv25.10",
+    "cuda": "13.0",
+    "gpu_architecture": "sm_100a",
+    "validation_status": "clean_flattened_source_build_abi_and_single_gpu_numerics_passed_on_matching_host",
+    "gpu_gate_receipt": "release/gpu_gate_receipt.json"
+  },
+  "evaluation_environment": {
+    "contract": "release/evaluation_environment.json",
+    "requirements": "release/evaluation_requirements.lock",
+    "installer": "scripts/release/install_evaluation_extra.sh",
+    "isolation": "separate virtual environment with system-site-packages",
+    "training_abi_mutation_allowed": false
+  },
+  "paper": {
+    "source": "docs/technical_report/main.tex",
+    "source_revision": "same_as_exported_release_source_revision",
+    "manuscript_and_original_figures_license": "CC-BY-4.0",
+    "standard_tex_fonts_only": true,
+    "bundled_brand_assets": false
+  },
+  "external_inputs": {
+    "schema": "release/external_inputs.schema.json",
+    "example": "release/external_inputs.example.json",
+    "tokenizer_contract": "local HF asset directory with three independently hash-bound files",
+    "credential_values_allowed_in_repository": false,
+    "remote_storage_locations_allowed_in_repository": false,
+    "checkpoint_bytes_or_metadata_allowed_in_repository": false
+  },
+  "entrypoints": {
+    "bootstrap": "scripts/release/bootstrap.sh",
+    "build_kernels_and_check_abi": "scripts/release/build_kernels.sh",
+    "single_gpu_gates": "scripts/release/run_gpu_gates.sh",
+    "gates": "scripts/release/run_gates.sh",
+    "fresh_run": "scripts/release/run_recipe.sh",
+    "resume": "scripts/release/resume_recipe.sh"
+  },
+  "route_execution_contract": "configs/paper/route_execution.json",
+  "route_component_matrix": "release/route_component_matrix.json",
+  "source_support_matrix": "release/source_support_matrix.json",
+  "remaining_release_gates": [
+    "clean export content audit and independent secret scan",
+    "fresh disposable clone and bundle verification"
+  ],
+  "scoped_limitations_after_release": [
+    "the recorded container digest was not independently pulled because no container engine was available; GPU gates ran on a host matching its NGC-derived software contract",
+    "full 64-GPU 160B-token rerun is not repeated from the public export",
+    "historical reference kernels are preserved but unsupported",
+    "private datasets, tokenizer assets, checkpoints, and checkpoint metadata are user-supplied"
+  ]
+}

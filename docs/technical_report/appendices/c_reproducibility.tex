@@ -1,0 +1,138 @@
+\section{Reproducibility}
+\label{app:reproducibility}
+
+\subsection{Report inputs}
+
+The main training and performance tables and figures are generated from
+checked-in data snapshots. The publication data directory contains the
+training-loss series, same-accelerator performance aggregates, checkpoint
+inventories, evaluation results, plotting programs, and a SHA-256 ledger.
+Figure generators verify their declared inputs before writing an output. The machine-readable recipe
+ledger records the route, precision policy, rounding and preconditioning
+choices, batch geometry, seed when recovered, checkpoint horizon, and evidence
+status for every experiment discussed in the paper. Shared model, data, and
+optimizer fields are stored separately so that an incomplete historical row
+cannot silently inherit a value from a newer run.
+
+The historical BF16 and TE-native training-loss curves in
+Figure~\ref{fig:llama8b-loss} use fixed offsets inferred from 41 matched steps
+in seed-42 controls. Extending those early-run offsets to step 38,140 is a
+display assumption, not a second observed long run. It does not alter any
+checkpoint, validation result, or downstream score; both raw series and the
+adjustment are retained.
+
+The long-run curves combine only explicitly identified execution segments.
+The \localcta{}+fixed-H16 and operand-hybrid trajectories each cross a
+documented full-state resume boundary. Their manifests identify the source and
+continuation ranges; no overlapping step is counted twice. Pure-v5 telemetry
+is dense through step 19,000 and sparse thereafter. Its late dashed line is a
+visual fit through exact observations and is never used to compute an endpoint
+or comparison.
+
+\subsection{Checkpoint and evaluator contract}
+
+Training comparisons use exact shared steps. Custom-route values are raw
+observations. Downstream comparisons use literal step-38,000
+checkpoints; a terminal, nearby, or cross-lineage checkpoint is never
+substituted. Distributed checkpoints must pass shard inventory and conversion
+checks before evaluation.
+
+The evaluator must reproduce the training model's RoPE and RMSNorm semantics.
+The Llama-3.1 8B training configuration uses base $500{,}000$ and the
+long-context RoPE scaling parameters $(8,1,4,8192)$. An earlier evaluator
+disabled this scaling in both its converted-model and native-reference arms.
+Their agreement therefore proved internal parity but not parity with training.
+Results from that evaluator are excluded.
+
+A separate post-cursor validation attempt used the correct model semantics but
+failed a data-source robustness check: its apparent route ordering changed on
+a small group of source ranks at a physical-cursor discontinuity. Those values
+are also excluded. The replacement stream was constructed afresh from
+deterministic windows in the 90--95\% physical sample band of the DCLM and
+OLMo-without-DCLM components. Documents are deduplicated by raw-text SHA-256,
+combined at an 82/18 token ratio, globally hash-shuffled, and only then packed
+and sharded. Thus a device rank is not tied to one source or contiguous cursor
+stratum.
+
+The replacement fixed validation stream contains 768 sequences of 8,193 tokens, yielding
+6,291,456 scored next-token targets. It is tokenized once with the pinned
+Llama-3.1 tokenizer and reused byte-for-byte for every checkpoint. We call it
+a \emph{fixed external validation stream}, not a held-out split, because a
+route-complete proof of zero document overlap with every historical training
+trajectory is unavailable. Its source ledger contains 4,597 documents with
+4,597 unique raw-text hashes. Before the route matrix or downstream panel is
+admitted, the corrected evaluator must show exact converted/native agreement
+at the full 8,192-token context and a late BF16 checkpoint must improve over an
+early BF16 checkpoint by more than five sequence-level standard errors.
+Both admission checks pass. Converted and native evaluation agree exactly at
+full context for the step-2,000 and step-29,000 BF16 checkpoints. Their
+validation NLL values are 3.283272 and 2.460520, respectively; the paired
+late-minus-early difference is $-0.822753$ with sequence-level standard error
+0.003708.
+
+Downstream evaluation uses BF16 inference and one evaluator configuration for
+all routes. MMLU is 5-shot, HellaSwag 10-shot, WinoGrande 5-shot, and
+ARC-Challenge 25-shot; HellaSwag and ARC report normalized accuracy. A route
+enters the common panel only after the exact checkpoint and corrected model
+semantics are verified.
+
+\subsection{Historical execution identity}
+
+Historical experiments are bound to the code, submodule, kernel asset,
+checkpoint, and output identities recovered for that execution. The current
+source and runtime tips are not assigned retroactively to an older run. Where
+a field was not recovered, the ledger records it as unknown rather than
+guessing the nearest commit. Complete identifiers and content digests are in
+the publication data ledger rather than the narrative.
+
+The global-v5 path uses one orientation-consistent 2D16 weight
+encoding. The completed \mxfp{}+row-SR+fixed-H32 run uses the historical native
+\mxfp{} body plus a content-verified Wgrad preconditioning overlay. The completed
+\localcta{}+fixed-H16 trajectory uses a fresh segment followed by an exact
+optimizer-and-model-state continuation with a later overlap patch. The
+operand-wise plain-H16 hybrid also uses an exact optimizer-and-model-state
+continuation. These are treated
+as complete trajectories only because their manifests enumerate the segment
+boundaries and checkpoint state.
+
+\subsection{Same-state Dgrad diagnostic}
+\label{app:dgrad-diagnostic}
+
+The operand-format diagnostic uses tensors from the step-28,000 checkpoint of
+the completed \mxfp{}+row-SR+fixed-H32 trajectory. It replays Dgrad with \mxfp{} and
+\localcta{} against the corresponding BF16 result. The surrounding harness
+configures a paired plain-H16 transform for Wgrad only; that transform does
+not enter the scored Dgrad contraction and is not part of the comparison.
+
+For each captured tensor, four stochastic candidate tensors are averaged
+before computing
+\begin{equation}
+  E=\sum_i\left(\widehat{dX}_i-dX_i^{\mathrm{BF16}}\right)^2.
+\end{equation}
+The capture covers three
+sequence-2,048 batches, QKV, attention-output, and FFN projections in all 32
+blocks, and a fresh diagnostic SR namespace rather than restored training RNG
+state. This gives 96 layer--component comparisons per batch and 288 in total.
+\localcta{} has lower error energy in all 288 comparisons. Giving each tensor
+equal weight, the cross-capture geometric mean of
+$E_{\mathrm{MX}}/E_{\mathrm{localCTA}}$ is 1.292.
+
+\subsection{Excluded experiments}
+
+The v5/\mxfp{} depth hybrid remains outside the common endpoint panels because
+it diverged and retained only 16 of 32 terminal shards. The TE route with four
+final BF16 blocks and the fixed-H32 operand hybrid both completed 160B-token
+trajectories with resumable final checkpoints and are included in the endpoint
+panels.
+
+Diagnostic screens are also excluded from the common panels. The
+low-precision output-head arms produced no stable model-level speedup. A
+tail-resumed \localcta{} transform screen changed runtime state and is not a
+causal comparison. The superseded downstream evaluator omitted training-time
+RoPE scaling, while the post-cursor validation stream changed route ordering
+across a source-cursor stratum. Their records are retained for audit, not used
+as scientific endpoints.
+
+Run \texttt{make} in the report directory to regenerate the figures and PDF.
+The checked-in data README lists each source file, generator, and verification
+command; \texttt{data/SHA256SUMS} binds the publication inputs.

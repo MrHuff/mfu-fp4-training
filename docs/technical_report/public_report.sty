@@ -1,0 +1,114 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{public_report}[2026/08/28 Public technical report styling]
+
+\RequirePackage{xcolor}
+\RequirePackage{fancyhdr}
+\RequirePackage{caption}
+
+% Visual tokens and layout match the FP4 FlashAttention-4 technical report.
+\definecolor{ReportAccent}{HTML}{FF6F79}
+\definecolor{ReportAccentDark}{HTML}{C84553}
+\definecolor{ReportInk}{HTML}{1F2021}
+\definecolor{ReportMuted}{HTML}{53595E}
+\definecolor{ReportLine}{HTML}{E2E4E5}
+\definecolor{ReportPaper}{HTML}{FAF8F9}
+
+\color{ReportInk}
+\setlength{\headheight}{24pt}
+\setlength{\headsep}{22pt}
+
+\fancypagestyle{publicreport}{%
+  \fancyhf{}
+  \fancyhead[L]{\sffamily\bfseries\footnotesize OPEN RESEARCH RELEASE}
+  \fancyhead[R]{\sffamily\footnotesize\color{ReportMuted}TECHNICAL REPORT}
+  \fancyfoot[L]{\sffamily\scriptsize\color{ReportMuted}Format-Aware FP4 Training}
+  \fancyfoot[R]{\sffamily\scriptsize\color{ReportMuted}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
+  \renewcommand{\headrule}{\hbox to\headwidth{\color{ReportLine}\leaders\hrule height \headrulewidth\hfill}}
+  \renewcommand{\footrulewidth}{0pt}
+}
+\pagestyle{publicreport}
+\makeatletter
+\let\ps@plain\ps@publicreport
+\renewcommand{\@seccntformat}[1]{%
+  \textcolor{ReportAccent}{\csname the#1\endcsname}\quad}
+\renewcommand\section{%
+  \@startsection{section}{1}{\z@}%
+    {-3.2ex \@plus -1ex \@minus -.2ex}%
+    {1.4ex \@plus .2ex}%
+    {\normalfont\sffamily\Large\bfseries\color{ReportInk}}}
+\renewcommand\subsection{%
+  \@startsection{subsection}{2}{\z@}%
+    {-2.8ex\@plus -1ex \@minus -.2ex}%
+    {1.1ex \@plus .2ex}%
+    {\normalfont\sffamily\large\bfseries\color{ReportInk}}}
+\renewcommand\subsubsection{%
+  \@startsection{subsubsection}{3}{\z@}%
+    {-2.5ex\@plus -1ex \@minus -.2ex}%
+    {0.9ex \@plus .2ex}%
+    {\normalfont\sffamily\normalsize\bfseries\color{ReportInk}}}
+\renewcommand\paragraph{%
+  \@startsection{paragraph}{4}{\z@}%
+    {2.0ex \@plus .5ex \@minus .2ex}%
+    {-0.8em}%
+    {\normalfont\sffamily\bfseries\color{ReportAccentDark}}}
+\makeatother
+
+\captionsetup{
+  font=small,
+  labelfont={sf,bf,color=ReportAccentDark},
+  textfont={color=ReportMuted},
+  margin=0.04\textwidth
+}
+\renewcommand{\labelitemi}{\textcolor{ReportAccent}{\small\textbullet}}
+\renewcommand{\labelitemii}{\textcolor{ReportAccentDark}{\scriptsize\textbullet}}
+
+\makeatletter
+\newcommand{\reportsubtitle}[1]{\gdef\@reportsubtitle{#1}}
+\newcommand{\@reportsubtitle}{}
+\renewcommand{\maketitle}{%
+  \pagenumbering{roman}
+  \begin{titlepage}
+    \thispagestyle{empty}
+    \noindent
+    \begin{minipage}[c]{0.68\textwidth}
+      {\sffamily\bfseries\large OPEN RESEARCH RELEASE}
+    \end{minipage}%
+    \begin{minipage}[c]{0.32\textwidth}
+      \raggedleft\sffamily\small\color{ReportMuted}TECHNICAL REPORT
+    \end{minipage}
+
+    \vspace{8mm}
+    {\color{ReportAccent}\rule{\textwidth}{1.6pt}}
+    \vspace{20mm}
+
+    {\raggedright\sffamily\bfseries\fontsize{28}{34}\selectfont\color{ReportInk}
+      \@title\par}
+    \vspace{8mm}
+    {\sffamily\fontsize{16}{22}\selectfont\color{ReportMuted}
+      \@reportsubtitle\par}
+
+    \vfill
+    \noindent
+    \colorbox{ReportPaper}{%
+      \begin{minipage}{0.93\textwidth}
+        \vspace{5mm}
+        {\sffamily\bfseries\color{ReportAccentDark}REPORT FOCUS}\par
+        \vspace{2mm}
+        {\sffamily\large\color{ReportInk}
+          Native FP4 training, format-aware fusion, and measured
+          speed--quality trade-offs for Llama on NVIDIA Blackwell.\par}
+        \vspace{5mm}
+      \end{minipage}}
+
+    \vfill
+    \noindent
+    {\sffamily\bfseries\color{ReportInk}\@author}\par
+    \vspace{1.5mm}
+    {\sffamily\color{ReportMuted}\@date}\par
+    \vspace{8mm}
+    {\color{ReportAccent}\rule{42mm}{1.6pt}}
+  \end{titlepage}
+  \pagenumbering{arabic}
+}
+\makeatother

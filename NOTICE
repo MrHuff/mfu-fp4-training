@@ -1,0 +1,29 @@
+MFU FP4 Training
+Copyright (c) 2026 Robert Hu and contributors.
+
+The MIT License in LICENSE applies only to project-authored software for which
+the copyright holder is authorized to grant those rights, including authorized
+custom portions of fp4_runtime. It does not relicense third-party or adapted
+material. Files and vendored components carrying their own copyright, license,
+or attribution notices remain governed by those terms.
+
+Source inherited from the Graphcore Research gc-training lineage remains under
+the Apache License, Version 2.0, retained at LICENSES/APACHE-2.0.txt. This
+includes files carrying a Graphcore Ltd. copyright notice. NVIDIA-derived
+Transformer Engine code under fp4_runtime/TK_quantisation/nvfp4* and the
+Apache-identified Google DeepMind, IST Austria, AI21 Labs, Hugging Face, and
+NVIDIA source described in THIRD_PARTY_NOTICES.md remain under Apache-2.0.
+Those terms are not replaced by the repository's MIT license.
+
+Original manuscript prose and original figure content are available under
+CC BY 4.0 as described in LICENSES/CONTENT.md.
+
+This distribution includes or adapts third-party software. Copyright and
+license notices embedded in those files remain in force. See
+THIRD_PARTY_NOTICES.md and release/components.json in a built release for the
+component, commit, file-ledger, and retained-license inventory.
+
+Meta Llama 3 is licensed under the Meta Llama 3 Community License,
+Copyright (c) Meta Platforms, Inc. All Rights Reserved.
+
+Built with Meta Llama 3.

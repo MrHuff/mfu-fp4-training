@@ -1,0 +1,26 @@
+\begin{abstract}
+Four-bit floating-point (FP4) Tensor Cores accelerate matrix multiplication,
+but a language-model training step must also compute scales, pack operands,
+construct the layouts used by forward and backward, and preserve autograd
+state. This surrounding work can erase the matrix-multiply speedup. We present
+\emph{format-aware fusion}, which designs each quantized producer around the
+scale domain and operand views required by its consumers. The resulting native
+\mxfp{}, global \nvfp{}, and cooperative-thread-array-local (CTA-local)
+\nvfp{} paths fuse or overlap normalization, activation, quantization, layout
+production, and selected backward work. They combine orientation-consistent
+two-dimensional weights with contraction-specific rounding and
+preconditioning, while retaining a bfloat16 (BF16) output projection and
+compiled cross entropy.
+
+In same-accelerator Llama-8B probes, BF16 and NVIDIA Transformer Engine (TE)
+NVFP4 reach 18.8K and 27.6K tokens/s/GPU, while the fastest custom route
+reaches 37.9K. The \mxfp{} recipe with row-gradient stochastic rounding and
+fixed-sign 32-value Hadamard Wgrad preconditioning retains 37.2K tokens/s/GPU,
+or 86.3\% BF16 model FLOP utilization, and ends 2.11\% above the raw BF16 loss
+near 160 billion training tokens. The TE recipe with four final BF16 blocks
+tracks BF16 more closely, ending 0.87\% above it, but reaches 27.1K
+tokens/s/GPU. Neither tested \mxfp{}/CTA-local hybrid dominates the
+\mxfp{}-H32 route across throughput, training loss, and fixed-stream
+validation. These results show that FP4 speed and numerical behavior depend on
+the scale contract, operand, and complete execution path.
+\end{abstract}

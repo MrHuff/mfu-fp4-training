@@ -1,0 +1,100 @@
+# Public, path-free base configuration for the 160B-token Llama 3.1 8B
+# experiments. Route-specific converters and kernel controls are selected by
+# configs/paper/route_execution.json. All input and output paths are supplied
+# at launch time through a validated external-input binding.
+
+[job]
+dump_folder = "/tmp/mfu-release-output-must-be-overridden"
+description = "Llama 3.1 8B FP4 paper reproduction"
+steps = 38147
+experimental_modules = ["low_bits_training.reproduction.paper_contracts"]
+
+[profiling]
+enable_profiling = false
+save_traces_folder = "profile_trace"
+profile_freq = 1000
+
+[metrics]
+log_freq = 10
+enable_tensorboard = true
+save_tb_folder = "tb"
+distributed_mode = "rank_0"
+
+[model]
+name = "llama3_gc"
+flavor = "8B"
+norm_type = "rmsnorm"
+hf_assets_path = "/tmp/mfu-release-model-assets-must-be-overridden"
+converters = ["bfloat16", "paper_regular_bf16_head_v1", "fp32_master"]
+
+[optimizer]
+name = "AdamW"
+implementation = "fused"
+lr = 0.0003
+beta1 = 0.9
+beta2 = 0.95
+eps = 1e-8
+weight_decay = 0.1
+
+[training]
+global_batch_size = 512
+local_batch_size = 4
+seq_len = 8192
+max_norm = 1.0
+steps = 71526
+dtype = "bfloat16"
+mixed_precision_param = "bfloat16"
+dataset = "packed-bin"
+dataset_path = "/tmp/mfu-release-dataset-manifest-must-be-overridden.json"
+load_dataset_kwargs = '{"repeat":false,"require_full_run":true,"num_workers":1,"prefetch_factor":4,"pin_memory":false}'
+dataset_node_distribution = "shard"
+enable_cce = false
+compile = false
+
+[compile]
+enable = true
+components = ["loss"]
+backend = "inductor"
+
+[lr_scheduler]
+warmup_steps = 2000
+decay_type = "cosine"
+decay_ratio = 0.3333333333333333
+min_lr_factor = 0.01
+
+[parallelism]
+pipeline_parallel_degree = 1
+data_parallel_replicate_degree = 1
+data_parallel_shard_degree = -1
+tensor_parallel_degree = 1
+fsdp_reshard_after_forward = "default"
+
+[checkpoint]
+enable = true
+folder = "checkpoint"
+interval = 1000
+keep_latest_k = 2
+export_dtype = "float32"
+async_mode = "disabled"
+last_save_model_only = false
+
+[activation_checkpoint]
+mode = "selective"
+selective_ac_option = "32"
+
+[validation]
+enable = false
+
+[fp4_cce]
+enabled = false
+
+[wandb]
+project = "mfu-fp4-public-reproduction"
+mode = "disabled"
+
+[debug]
+seed = 42
+
+[comm]
+init_timeout_seconds = 7200
+train_timeout_seconds = 7200

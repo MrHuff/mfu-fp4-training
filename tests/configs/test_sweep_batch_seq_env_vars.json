@@ -1,0 +1,24 @@
+# Not part of automated test but left as an example. Remove this line to test with titan_sweep.py
+
+{
+    "command": "CONFIG_FILE=train_configs/debug_model.toml NGPU=1  ./run_train.sh",
+    "environment": {
+        "WANDB_PROJECT": "sweep_bs_seqlen_envtest"
+    },
+        "parameters": [
+        {
+            "training.batch_size": {"values": [8]},
+            "training.seq_len": {"values": [2048]},
+            "environment": {
+                "WANDB_NAME": "bs_8_2048"
+            }
+        },
+        {
+            "training.batch_size": {"values": [4]},
+            "training.seq_len": {"values": [4096]},
+            "environment": {
+                "WANDB_NAME": "bs_4_4096"
+            }
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+\section{Conclusion}
+
+Format-aware fusion makes the complete FP4 producer--consumer boundary the
+unit of optimization. The TE routes give the closest observed training-loss
+tracking, but their measured tensor-global execution paths reach only
+27.1--27.6K tokens/s/GPU. Among the custom routes, \mxfp{} with row-gradient
+SR and fixed-sign H32 Wgrad preconditioning gives the strongest measured
+speed--quality point: 37.2K tokens/s/GPU, 86.3\% BF16 MFU, a 2.11\% raw
+endpoint-loss excess, and the lowest observed fixed-stream validation NLL. Its
+downstream ranking remains task dependent. Neither the tested depth-wise nor
+operand-wise hybrid improves this combined point. The opposite outcomes of
+Hadamard preconditioning under \mxfp{} and CTA-local scaling show that scale
+domain, rounding, and preconditioning must be chosen together. Wider-range
+block scales combined with local production or delayed global scaling remain
+an untested next direction.

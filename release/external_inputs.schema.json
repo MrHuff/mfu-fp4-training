@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/mfu-fp4/external-inputs.schema.json",
+  "title": "MFU FP4 external input binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tokenizer", "dataset", "output"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "tokenizer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directory", "files"],
+      "properties": {
+        "directory": {
+          "$ref": "#/$defs/local_path"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "special_tokens_map.json"
+          ],
+          "properties": {
+            "tokenizer.json": { "$ref": "#/$defs/sha256" },
+            "tokenizer_config.json": { "$ref": "#/$defs/sha256" },
+            "special_tokens_map.json": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "cursor_contract"],
+      "properties": {
+        "manifest": {
+          "$ref": "#/$defs/hashed_file"
+        },
+        "cursor_contract": {
+          "$ref": "#/$defs/hashed_file"
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directory", "manifest", "route_id", "step"],
+      "properties": {
+        "directory": {
+          "$ref": "#/$defs/local_path"
+        },
+        "manifest": {
+          "$ref": "#/$defs/hashed_file"
+        },
+        "route_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directory"],
+      "properties": {
+        "directory": {
+          "$ref": "#/$defs/local_path"
+        }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "enum": ["none", "provider_default_chain"]
+        },
+        "required_environment_variable_names": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "local_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z][A-Za-z0-9+.-]*://).+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "hashed_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/local_path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+MIT License
+
+Copyright (c) 2026 Robert Hu and contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+This license applies only to the original project-authored portions of this
+FP4 runtime for which the copyright holder is authorized to grant these
+rights. It does not relicense third-party or adapted material. Files carrying
+Graphcore, NVIDIA, Meta, PyTorch, Apple, ThunderKittens, Transformer Engine,
+or other third-party notices remain governed by their file-level and retained
+upstream terms. No existing copyright or attribution notice is removed or
+superseded by this file.
+
+In particular, the NVIDIA-copyrighted Transformer Engine-derived files under
+TK_quantisation/nvfp4, TK_quantisation/nvfp4_v2,
+TK_quantisation/nvfp4_v3, TK_quantisation/nvfp4_v4,
+TK_quantisation/nvfp4_v5, and TK_quantisation/nvfp4_v6 were modified for this
+standalone runtime and its experimental generations. They remain subject to
+the Apache License, Version 2.0 retained at ../LICENSES/APACHE-2.0.txt.
+Google DeepMind and IST Austria files under fused_ops that identify
+Apache-2.0 remain subject to the same retained terms.
+
+ThunderKittens source under ThunderKittens retains its own MIT License at
+ThunderKittens/LICENSE.

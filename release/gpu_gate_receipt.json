@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "status": "pass_on_matching_host",
+  "observed_utc": "2026-09-03",
+  "source_scope": {
+    "form": "fresh_scrubbed_single-root disposable clone",
+    "fp4_runtime_upstream_commit": "301ab63d354a4f8c24b7c0da499736e3f14b7400",
+    "thunderkittens_upstream_commit": "2dd00a943309984ab7c1434a5614f2a63efd933d",
+    "generated_or_prebuilt_extensions_used": false
+  },
+  "environment": {
+    "contract": "release/container_dependency_lock.json",
+    "recorded_container_reference": "nvcr.io/nvidia/pytorch:25.10-py3@sha256:42263b2424fc237b34c4fc4a91c30d603c57eed36e37d31ff6d9a4f1f801edee",
+    "host_software_contract_matched": true,
+    "python": "3.12.3",
+    "pytorch": "2.9.0a0+145a3a7bda.nv25.10",
+    "cuda": "13.0",
+    "nvcc": "13.0.88",
+    "gpu": "NVIDIA GB200",
+    "cuda_compute_capability": "10.0",
+    "container_engine_available": false,
+    "container_digest_independently_pulled": false
+  },
+  "kernel_builds": [
+    {"id": "mxfp4_v4_quantizer", "extension": "mxfp4_quant_v4", "status": "pass"},
+    {"id": "localcta_v4_quantizer", "extension": "_tk_quant_localcta_v4", "status": "pass"},
+    {"id": "global_nvfp4_v5_quantizer", "extension": "_tk_quant_v5", "status": "pass"},
+    {"id": "mxfp4_gemm", "extension": "_C_mx", "status": "pass"},
+    {"id": "nvfp4_gemm", "extension": "_C", "status": "pass"},
+    {"id": "localcta_v3_gemm", "extension": "_C_nv_localcta_gemm_v3", "status": "pass"}
+  ],
+  "abi": {
+    "status": "pass",
+    "extensions_imported": 6,
+    "checker": "tools/check_fp4_runtime_abi.py"
+  },
+  "numerics": {
+    "status": "pass",
+    "checker": "tools/check_fp4_runtime_numerics.py",
+    "shape": [512, 512, 512],
+    "seed": 20260903,
+    "thresholds": {
+      "rel_l2_strict_upper_bound": 0.25,
+      "cosine_strict_lower_bound": 0.96,
+      "norm_ratio_closed_interval": [0.8, 1.2]
+    },
+    "mxfp4_v4_signed_h32": {
+      "rel_l2": 0.16712865233421326,
+      "cosine": 0.9859760403633118,
+      "norm_ratio": 0.9949585199356079
+    },
+    "nvfp4_v5": {
+      "rel_l2": 0.16246938705444336,
+      "cosine": 0.9868103265762329,
+      "norm_ratio": 1.000624179840088
+    }
+  },
+  "behavior_gates": {
+    "mxfp4_correlated_dual_view_sr": {
+      "status": "pass",
+      "max_spatial_correlation": 0.001073
+    },
+    "nvfp4_v5_fused_norm": {"status": "pass", "tests_passed": 2},
+    "localcta_2d_weight_common_outer_scale": {
+      "status": "pass",
+      "cases": 4,
+      "covers": ["row and column reconstruction", "forward GEMM", "dgrad GEMM", "exact zero"]
+    }
+  },
+  "commands": [
+    "scripts/release/build_kernels.sh",
+    "scripts/release/run_gpu_gates.sh"
+  ],
+  "not_claimed": [
+    "independent pull or execution of the recorded container digest",
+    "distributed 64-GPU training reproduction from the public export",
+    "full 160B-token training replay from the public export"
+  ]
+}

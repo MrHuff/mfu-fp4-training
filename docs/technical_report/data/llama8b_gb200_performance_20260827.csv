@@ -1,0 +1,9 @@
+route,world_size,local_batch,gradient_accumulation,window,tokens_per_second_per_gpu,mfu_percent,median_logged_memory_gib,status
+BF16,32,2,8,median steps 40-2000,18282.0,47.06,113.67,complete
+TE-native NVFP4,32,2,8,median steps 40-2000,26820.75,69.0375,115.96,complete
+TE NVFP4 F0L4,32,2,8,median steps 40-100,27077.5,69.70,126.03,complete
+TE NVFP4 full body,32,2,8,median steps 40-100,27622.0,71.10,125.80,complete
+MXFP4-v4 + row-SR,32,4,4,median steps 40-100,36687.5,94.43,179.61,complete
+localCTA-v4,32,4,4,median steps 40-100,32620.5,83.9675,146.26,complete
+localCTA/MXFP4 hybrid,32,4,4,median steps 40-100,33130.75,85.28,156.24,complete
+Pure v5,32,4,4,median steps 40-100,32490.5,83.63,155.63,complete

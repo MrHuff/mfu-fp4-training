@@ -1,0 +1,165 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+
+\title{CTA-Local NVFP4: Current Algebra and Benchmark Snapshot}
+\author{}
+\date{March 29, 2026}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+
+The current production path is \texttt{localcta\_prepared}. It uses CTA-local outer scaling with a promoted default numerator
+\[
+K_{\mathrm{cta}} = 1493,
+\]
+and folds the chunk decode scale into prepared FP8 microscale tensors during quantization so GEMM can reuse the baseline TK runtime structure.
+
+\section{Side-by-Side Quantization Algebra}
+
+\[
+\renewcommand{\arraystretch}{1.5}
+\begin{array}{c|c}
+\textbf{Baseline v5} & \textbf{LocalCTA} \\
+\hline
+a_G = \max\limits_{i,j} |x_{ij}| &
+a_{C(c)} = \max\limits_{(i,j)\in c} |x_{ij}| \\
+
+S_{\mathrm{enc}}^{\mathrm{base}} = \frac{2688}{a_G} &
+S_{\mathrm{enc}}^{\mathrm{cta}}(c) = \frac{K_{\mathrm{cta}}}{a_{C(c)}} \\
+
+sg^{\mathrm{base}} = \frac{a_G}{2688} &
+sg^{\mathrm{cta}}(c) = \frac{a_{C(c)}}{K_{\mathrm{cta}}} \\
+
+M_b^{\mathrm{base}} = Q_{E4M3}\!\left(\frac{6}{m_b S_{\mathrm{enc}}^{\mathrm{base}}}\right) &
+M_b^{\mathrm{cta}} = Q_{E4M3}\!\left(\frac{6}{m_b S_{\mathrm{enc}}^{\mathrm{cta}}(c)}\right) \\
+
+sc_b^{\mathrm{base}} = Q_{E4M3}\!\left(\frac{1}{M_b^{\mathrm{base}}}\right) &
+sc_b^{\mathrm{cta}} = Q_{E4M3}\!\left(\frac{1}{M_b^{\mathrm{cta}}}\right) \\
+
+q_b^{\mathrm{base}} = Q_{FP4}\!\left(x \, M_b^{\mathrm{base}} S_{\mathrm{enc}}^{\mathrm{base}}\right) &
+q_b^{\mathrm{cta}} = Q_{FP4}\!\left(x \, M_b^{\mathrm{cta}} S_{\mathrm{enc}}^{\mathrm{cta}}(c)\right) \\
+
+\hat{x}_b^{\mathrm{base}} = q_b^{\mathrm{base}} \, sc_b^{\mathrm{base}} \, sg^{\mathrm{base}} &
+\hat{x}_b^{\mathrm{cta}} = q_b^{\mathrm{cta}} \, sc_b^{\mathrm{cta}} \, sg^{\mathrm{cta}}(c)
+\end{array}
+\]
+
+For the prepared-scale GEMM path:
+\[
+sc_{b,\mathrm{prepared}}^{\mathrm{base}} = Q_{E4M3}\!\left(sc_b^{\mathrm{base}} sg^{\mathrm{base}}\right),
+\qquad
+sc_{b,\mathrm{prepared}}^{\mathrm{cta}} = Q_{E4M3}\!\left(sc_b^{\mathrm{cta}} sg^{\mathrm{cta}}(c)\right).
+\]
+
+\section{Exact-Arithmetic Cancellation Intuition}
+
+\[
+\begin{array}{c|c}
+\textbf{Baseline v5} & \textbf{LocalCTA} \\
+\hline
+M_b^{\mathrm{base}} \approx \dfrac{6}{m_b S_{\mathrm{enc}}^{\mathrm{base}}} &
+M_b^{\mathrm{cta}} \approx \dfrac{6}{m_b S_{\mathrm{enc}}^{\mathrm{cta}}(c)} \\
+
+sc_b^{\mathrm{base}} \approx \dfrac{m_b S_{\mathrm{enc}}^{\mathrm{base}}}{6} &
+sc_b^{\mathrm{cta}} \approx \dfrac{m_b S_{\mathrm{enc}}^{\mathrm{cta}}(c)}{6} \\
+
+sc_b^{\mathrm{base}} sg^{\mathrm{base}} \approx \dfrac{m_b}{6} &
+sc_b^{\mathrm{cta}} sg^{\mathrm{cta}}(c) \approx \dfrac{m_b}{6}
+\end{array}
+\]
+
+So in exact arithmetic the outer scale mostly cancels. In practice, the FP8 quantization of the intermediate microscales means that changing the outer amax changes the microscale quantization regime before that cancellation can happen.
+
+\section{Why LocalCTA Needed a Smaller Outer Numerator}
+
+LocalCTA typically has
+\[
+a_{C(c)} < a_G.
+\]
+With the original baseline numerator \(2688\), that made
+\[
+S_{\mathrm{enc}}^{\mathrm{cta}}(c) = \frac{2688}{a_{C(c)}}
+\]
+too aggressive. The encode side became over-normalized relative to the local chunk statistics, which pushed the FP8 microscale path into heavier saturation and worsened RMS error even when some max errors improved.
+
+Empirically, reducing the numerator to
+\[
+K_{\mathrm{cta}} = 1493
+\]
+produced a much better global compromise across normal, Laplace, Student-$t$, spike-heavy, grouped, and batched cases.
+
+\section{Current Sequential Benchmark Snapshot}
+
+\subsection*{Regular}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Shape & localcta\_prepared e2e (ms) & baseline\_v5 e2e (ms) \\
+\midrule
+$4096 \times 4096 \times 4096$ & 0.065 & 0.094 \\
+$8192 \times 8192 \times 8192$ & 0.282 & 0.356 \\
+$16384 \times 5632 \times 2048$ & 0.132 & 0.171 \\
+$65536 \times 5632 \times 2048$ & 0.414 & 0.481 \\
+$128000 \times 5632 \times 2048$ & 0.773 & 0.848 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+On these same regular shapes, GEMM-only is already at parity:
+\[
+0.030 \text{ vs } 0.031,\quad
+0.190 \text{ vs } 0.194,\quad
+0.083 \text{ vs } 0.082,\quad
+0.317 \text{ vs } 0.315,\quad
+0.614 \text{ vs } 0.612 \text{ ms.}
+\]
+
+\subsection*{Grouped QKV-like}
+
+Splits are \([2048, 1024, 1024]\).
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Shape & localcta\_prepared e2e (ms) & baseline\_v5 e2e (ms) \\
+\midrule
+$16384 \times 4096 \times 2048$ & 0.154 & 0.211 \\
+$65536 \times 4096 \times 2048$ & 0.377 & 0.648 \\
+$128000 \times 4096 \times 2048$ & 0.662 & 0.742 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Batched}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Shape & localcta\_prepared e2e (ms) & baseline\_v5 e2e (ms) \\
+\midrule
+$2 \times (1024 \times 8192 \times 8192)$ & 0.171 & 0.290 \\
+$2 \times (2048 \times 2048 \times 2048)$ & 0.069 & 0.118 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{GEMM Profiling Takeaway}
+
+Prepared GEMM is already in the same performance class as baseline TK NVFP4 GEMM. A final large-$K$ sweep found only a very small dispatch preference for prepared scales, and the remaining kernel limits are structural:
+
+\begin{itemize}
+\item roughly \(191\) registers per thread,
+\item roughly \(174\) to \(213\) KB dynamic shared memory per block,
+\item theoretical occupancy around \(12.5\%\),
+\item achieved occupancy around \(9.9\%\).
+\end{itemize}
+
+So the remaining end-to-end win is dominated by quantization, not by a large residual GEMM gap.
+
+\end{document}

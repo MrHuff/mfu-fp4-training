@@ -1,0 +1,4 @@
+route,world_size,local_batch,gradient_accumulation,window,tokens_per_second_per_gpu,mfu_percent,terminal_logged_memory_range_gib,status
+MXFP4-v4 + row-SR,32,4,4,median final 100 logged points through step 38140,39306.59362767252,101.17421103002806,156.91-157.15,complete
+localCTA-v4 repaired,32,8,2,median final 100 logged points through step 38140,36728.42987653983,94.54064806889896,211.05-211.16,complete
+localCTA/MXFP4 hybrid,32,8,2,step 16300 infrastructure-stop snapshot,37394,96.25,228.28-233.42,trajectory later completed across B300 and GB200

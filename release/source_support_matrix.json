@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "status": "release_candidate_scope",
+  "supported_paper_execution": [
+    {
+      "root": "low_bits_training",
+      "role": "TorchTitan training integration, route contracts, checkpointing, datasets, and evaluation"
+    },
+    {
+      "root": "TransformerEngine",
+      "role": "pinned Transformer Engine NVFP4 reference route"
+    },
+    {
+      "root": "fp4_runtime/TK_quantisation/mxfp4_v4",
+      "role": "MXFP4-v4 quantization"
+    },
+    {
+      "root": "fp4_runtime/TK_quantisation/nvfp4_CTA_local_v4",
+      "role": "localCTA-v4 quantization and mixed-operand producer"
+    },
+    {
+      "root": "fp4_runtime/TK_quantisation/nvfp4_v5",
+      "role": "global NVFP4-v5 quantization"
+    },
+    {
+      "root": "fp4_runtime/fused_ops/csrc",
+      "role": "fused activation and quantization operations loaded by supported routes"
+    },
+    {
+      "root": "fp4_runtime/ThunderKittens/kernels/gemm",
+      "role": "ThunderKittens GEMMs loaded by supported routes"
+    }
+  ],
+  "historical_reference_unsupported": [
+    {
+      "root": "fp4_runtime/TK_quantisation",
+      "scope": "MXFP4 v1-v4, NVFP4 base and v2-v6, and localCTA v1-v4; only mxfp4_v4, nvfp4_v5, and nvfp4_CTA_local_v4 are supported",
+      "reason": "older versions are archival kernel-evolution evidence, are not built by the release entrypoint, and are not supported paper execution paths"
+    },
+    {
+      "root": "fp4_runtime/fp4_cce_TK",
+      "scope": "minimal TK Python stack and four v4 CUDA sources",
+      "reason": "negative-result low-precision output-head reference; ordinary compiled BF16 cross entropy is used by supported paper routes and this archival stack is not built by the release entrypoint"
+    }
+  ],
+  "external_optional_not_redistributed": [],
+  "excluded": [
+    "SageAttention",
+    "runtime CUTLASS and FlashAttention trees",
+    "QUTLASS and qutlass-based FP4 cross entropy",
+    "FA4 and tk_fa4",
+    "Mamba CUDA",
+    "OpenAI Simple Evals derivative",
+    "experimental StableSPAM derivative",
+    "Flux model code",
+    "compiled binaries, profiles, logs, checkpoints, checkpoint metadata, credentials, and cluster controls"
+  ]
+}

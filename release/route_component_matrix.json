@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "status": "release_candidate_execution_mapping",
+  "shared_source_helpers": [
+    "low_bits_training/quantization/fused_te_linear.py",
+    "low_bits_training/quantization/tk_gemm.py",
+    "low_bits_training/quantization/mxfp4_fused_linear.py",
+    "low_bits_training/quantization/mxfp4_tk_converter.py",
+    "low_bits_training/quantization/localcta_sr_state.py",
+    "low_bits_training/quantization/mxfp4_sr_state.py",
+    "low_bits_training/quantization/nvfp4_2d_weight_adapter.py",
+    "low_bits_training/quantization/rht_utils.py",
+    "low_bits_training/distributed_control.py",
+    "low_bits_training/checkpoint_cuda_cache.py",
+    "low_bits_training/datasets/packed_binary.py",
+    "low_bits_training/trainer.py"
+  ],
+  "kernel_components": {
+    "transformer_engine_nvfp4": {
+      "repository_component": "transformer_engine",
+      "source_root": "TransformerEngine"
+    },
+    "mxfp4_v4": {
+      "repository_component": "fp4_runtime",
+      "source_root": "fp4_runtime/TK_quantisation/mxfp4_v4",
+      "gemm_source_root": "fp4_runtime/ThunderKittens/kernels/gemm/mxfp4_gb200",
+      "dependency": "fp4_runtime/ThunderKittens",
+      "support": "supported_paper_execution"
+    },
+    "localcta_v4": {
+      "repository_component": "fp4_runtime",
+      "source_root": "fp4_runtime/TK_quantisation/nvfp4_CTA_local_v4",
+      "gemm_source_root": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue_v3",
+      "qkv_rope_source_root": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200",
+      "dependency": "fp4_runtime/ThunderKittens",
+      "support": "supported_paper_execution"
+    },
+    "global_nvfp4_v5": {
+      "repository_component": "fp4_runtime",
+      "source_root": "fp4_runtime/TK_quantisation/nvfp4_v5",
+      "gemm_source_root": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200",
+      "dependency": "fp4_runtime/ThunderKittens",
+      "support": "supported_paper_execution"
+    },
+    "regular_bf16_cross_entropy": {
+      "repository_component": "training_source",
+      "source_root": "low_bits_training/cce",
+      "execution": "loss-only Inductor-compiled regular cross entropy"
+    },
+    "tk_low_precision_output_head_reference": {
+      "repository_component": "fp4_runtime",
+      "source_root": "fp4_runtime/fp4_cce_TK",
+      "support": "historical_reference_unsupported",
+      "paper_route_dependency": false,
+      "external_dependency": null
+    }
+  },
+  "routes": [
+    {
+      "id": "bf16-historical-long",
+      "components": ["regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/bf16.env",
+      "status": "controlled_reproduction"
+    },
+    {
+      "id": "te-native-historical-long",
+      "components": ["transformer_engine_nvfp4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/te_native_nvfp4.env",
+      "status": "controlled_reproduction"
+    },
+    {
+      "id": "pure-v5-fused-v1-long",
+      "components": ["global_nvfp4_v5", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/pure_v5.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "mxfp4-v4-row-sr-fused-v1-long",
+      "components": ["mxfp4_v4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/mxfp4_v4_row_sr.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "localcta-v4-row-sr-fused-v1-long",
+      "components": ["localcta_v4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/localcta_v4_row_sr.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "localcta-v4-row-sr-h16-rht-long",
+      "components": ["localcta_v4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/localcta_v4_h16_rht.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "localcta-mxfp4-hybrid-27-5-fused-v1-long",
+      "components": ["localcta_v4", "mxfp4_v4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/localcta_mxfp4_27_5.env",
+      "status": "recorded_legacy_route"
+    },
+    {
+      "id": "mxfp4-v4-row-sr-h32-rht-long",
+      "components": ["mxfp4_v4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/mxfp4_v4_h32_rht.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "te-f0l4-long-attempt",
+      "components": ["transformer_engine_nvfp4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/te_f0l4.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "mxfp4-col-h16-localcta-dgrad-v1-long",
+      "components": ["mxfp4_v4", "localcta_v4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/mxfp4_col_h16_localcta_dgrad.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "mxfp4-col-h32-localcta-dgrad-v2-continuation",
+      "components": ["mxfp4_v4", "localcta_v4", "regular_bf16_cross_entropy"],
+      "executable_config": "configs/paper/executable/llama3_1_8b_160b.toml",
+      "route_environment": "configs/paper/env/mxfp4_col_h32_localcta_dgrad.env",
+      "status": "current_release_route"
+    },
+    {
+      "id": "v5-mxfp4-hybrid-27-5-invalid",
+      "components": ["global_nvfp4_v5", "mxfp4_v4", "regular_bf16_cross_entropy"],
+      "executable_config": null,
+      "status": "withheld_invalid",
+      "launch_allowed": false,
+      "resume_allowed": false
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "status": "sealed_host_gpu_validated_contract",
+  "base_image": {
+    "reference": "nvcr.io/nvidia/pytorch:25.10-py3@sha256:42263b2424fc237b34c4fc4a91c30d603c57eed36e37d31ff6d9a4f1f801edee",
+    "digest": "sha256:42263b2424fc237b34c4fc4a91c30d603c57eed36e37d31ff6d9a4f1f801edee",
+    "observed_utc": "2026-09-02"
+  },
+  "image_baked_runtime": {
+    "python": "3.12.3",
+    "pytorch": "2.9.0a0+145a3a7bda.nv25.10",
+    "cuda": "13.0",
+    "triton": "3.5.1",
+    "cuda_architecture": "sm_100a"
+  },
+  "required_python_packages_observed_in_image": {
+    "blobfile": "3.1.0",
+    "datasets": "3.6.0",
+    "fsspec": "2025.3.0",
+    "ml-dtypes": "0.5.3",
+    "mosaicml-streaming": "0.13.0",
+    "numpy": "2.4.1",
+    "pybind11": "3.0.1",
+    "sentencepiece": "0.2.1",
+    "tiktoken": "0.12.0",
+    "tokenizers": "0.21.4",
+    "torchdata": "0.11.0",
+    "transformers": "4.48.2",
+    "tyro": "1.0.5",
+    "unit-scaling": "0.3.5",
+    "wandb": "0.24.0",
+    "zstandard": "0.25.0"
+  },
+  "optional_external_source_dependencies": [],
+  "claims": {
+    "source_identity_sealed": true,
+    "dependency_resolution_from_mutable_names": false,
+    "host_software_contract_matched": true,
+    "clean_flattened_source_kernel_build_validated_on_matching_host": true,
+    "six_extension_abi_validated_on_matching_host": true,
+    "single_gpu_numerics_validated_on_matching_host": true,
+    "container_digest_independently_pulled": false,
+    "cold_container_kernel_build_validated": false,
+    "distributed_training_validated_from_public_export": false
+  },
+  "gpu_gate_receipt": "release/gpu_gate_receipt.json"
+}

@@ -1,0 +1,315 @@
+\section{FP4 Contracts and Numerical Method}
+
+\subsection{Related work}
+
+Low-precision training builds on mixed-precision accumulation and stochastic
+rounding \cite{gupta2015limited,micikevicius2018mixedprecision}. Early 4-bit
+systems combined integer weights and activations with specialized gradient
+formats, and later work showed how unbiased rounding can support 4-bit matrix
+multiplications \cite{sun2020ultralow,chmiel2023accurate}. FP8 and microscaling
+then established floating-point formats with shared block exponents
+\cite{micikevicius2022fp8,rouhani2023microexponents,
+rouhani2023microscaling,ocp2023mx}. Their behavior depends on more than bit
+width: scale format, block geometry, tensor statistics, and the contraction
+being quantized all matter
+\cite{yang2025microscaling,hu2025designspace,sun2025scaling,fasoli2026finer}.
+
+Recent FP4 pretraining systems make different choices along those axes. Tseng
+et al. apply MXFP4 to the two backward matrix multiplications and combine
+stochastic rounding with randomized Hadamard transform (RHT) preconditioning
+\cite{tseng2025mxfp4}. NVIDIA's NVFP4 recipe combines two-dimensional weights,
+gradient stochastic rounding, paired Wgrad preconditioning, and selected
+higher-precision linears \cite{nvidia2025nvfp4}. Quartet and FP4 All the Way
+study fully low-precision paths, while subsequent work develops native
+full-pipeline MXFP4 and unbiased NVFP4 gradient estimation
+\cite{castro2025quartet,chmiel2025fp4alltheway,cim2026nativemxfp4,
+panferov2026quartetii}.
+Other FP4 studies examine optimizer and oscillation effects, adaptive block
+scales, outlier dynamics, shrinkage bias, and quantization beyond the linear
+operators
+\cite{wang2025fp4,zhou2025exploringfp4,chen2025tetrajet,
+chen2025tetrajetv2,cook2025fouroversix,dong2026outliers,
+zhao2026ufp4,ding2026fullstack,agrusa2026whatmatters}. Complementary systems
+explore spectral-domain FP4, alternative four-bit formats, and native FP4
+training for mixture-of-experts models
+\cite{cao2026metis,taghian2026hifloat4,du2026halfs,zhang2026hoppermoe}.
+
+Three established mechanisms directly shape this work. A weight encoding can
+remain numerically consistent under transposition
+\cite{nvidia2025nvfp4,rahimifar2026transposition,cim2026nativemxfp4}.
+Stochastic rounding controls systematic rounding bias
+\cite{gupta2015limited,ozkara2025sr}. Paired Hadamard preconditioning spreads
+outliers while preserving the unquantized dot product
+\cite{ashkboos2024quarot,tseng2025mxfp4,nvidia2025nvfp4,
+cim2026nativemxfp4}. Our numerical contribution is their contraction-specific
+integration, not the mechanisms in isolation.
+
+The systems contribution is to optimize the quantizer, its physical layouts,
+the consuming matrix multiplication, and retained backward state as one
+execution boundary. This follows the broader principle that data movement and
+producer--consumer structure determine realized model speed
+\cite{dao2022flashattention,dao2023flashattention2,hsu2024liger,
+wijmans2024cutcrossentropy,spector2024thunderkittens,guo2026coda}.
+
+\subsection{The same four-bit values, three different scale contracts}
+
+All three native routes ultimately present E2M1 operands---one sign bit, two
+exponent bits, and one fraction bit---to a Blackwell Tensor Core. Their
+numerical and scheduling behavior nevertheless
+differs because they assign scales to different domains.  A useful common
+notation for one scalar is
+\begin{equation}
+  \widehat z_i = S\,s_{b(i)}
+  Q_{\mathrm{E2M1}}\!\left(\frac{z_i}{S\,s_{b(i)}}\right),
+  \label{eq:hierarchical-quant}
+\end{equation}
+where $s_{b(i)}$ is a block scale, $S$ is an optional outer scale, and
+$Q_{\mathrm{E2M1}}$ rounds and saturates to E2M1.  The scale choice determines
+both quantization error and when the producer may safely release its output.
+
+\begin{table}[tbp]
+  \centering
+  \caption{The FP4 execution contracts used in this report. CTA-local
+  NVFP4 is an implementation policy, not a new datatype.}
+  \label{tab:format-contracts}
+  \begin{tabularx}{\textwidth}{lccY}
+    \toprule
+    Route & Block & Scale metadata & Main systems consequence \\
+    \midrule
+    \mxfp{} & 32 & E8M0 block scale & Local reduction; coarse power-of-two grid \\
+    Global \nvfp{} v5 & 16 & E4M3 block + FP32 tensor & Requires the completed tensor amax \\
+    \localcta{} & 16 & E4M3 block + two FP32 tile-outer scales & Tile-local production; two-sided metadata \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+\FloatBarrier
+
+E8M0 represents a power-of-two scale with eight exponent bits and no fraction;
+E4M3 is an FP8 scale with four exponent and three fraction bits. In \mxfp{},
+$S=1$ and $s_b$ is an E8M0 power of two shared by 32 values.
+The block maximum therefore produces a scale locally, but adjacent scale
+levels differ by exactly two.  Global \nvfp{} instead uses an E4M3 scale for
+each 16 values and an FP32 tensor scale $S$ \cite{ocp2023mx,nvidia2025nvfp4}.
+Its local grid is finer, but every block depends on the completed tensor amax,
+the maximum absolute value.
+Our global-v5 path preserves that numerical contract while replacing generic
+quantize--layout--GEMM boundaries with native producers and consumers. Here,
+``v5'' names an implementation generation; it is not a different NVFP4
+datatype.
+
+The CTA-local route changes only the outer-scale domain. CTA denotes the
+cooperative thread array that owns a tile. For one GEMM output tile, an A-row
+tile owns $\alpha_i$ and a B-column tile owns $\beta_j$.
+Both remain fixed over the complete K reduction.  If $\widetilde A$ and
+$\widetilde B$ denote E2M1 values decoded with their E4M3 per-block scales,
+often called microscales, then
+\begin{equation}
+  C_{ij}=\alpha_i\beta_j
+  \sum_k \widetilde A_{ik}\widetilde B_{kj}.
+  \label{eq:localcta}
+\end{equation}
+The Tensor Core accumulates the inner sum and the epilogue applies
+$\alpha_i\beta_j$ once.  This factorization is valid only because the two
+outer scales are invariant in $K$, the contraction dimension. Keeping both corrections in FP32 metadata
+also avoids quantizing those corrections onto the coarser FP8 scale grid.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/fp4_format_execution_routes.png}
+  \caption{The formats share E2M1 payloads but expose different completion
+  dependencies.  Consequently, the profitable fusion boundary is
+  format-specific rather than a single generic ``FP4 linear'' kernel.}
+  \label{fig:format-execution-routes}
+\end{figure}
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.94\textwidth]{figures/fp4_localcta_scaling.png}
+  \caption{Global and CTA-local hierarchical \nvfp{} scaling. Global NVFP4
+  completes a tensor-wide amax before finalizing its payload. CTA-local
+  scaling carries row and column outer scales into the consuming GEMM and
+  applies their product after the full K accumulation.}
+  \label{fig:localcta-scaling}
+\end{figure}
+
+\subsection{Why forward, data gradient, and weight gradient need different views}
+
+For a linear layer $Y=XW^{\mathsf T}$, forward propagation (Fprop), the input
+or data gradient (Dgrad), and the weight gradient (Wgrad) consume different
+views of the same tensors. Let $Q_r$ denote a row-facing representation and
+$Q_c$ a column-facing representation. Both preserve the logical tensor shape;
+the subscript identifies the physical layout and scale orientation used by the
+consumer. Suppressing decode and scale metadata, training evaluates three
+contractions:
+\begin{align}
+  \widehat Y  &= Q_r(X)Q_r(W)^{\mathsf T},
+    &&\text{Fprop}, \label{eq:fprop}\\
+  \widehat{dX} &= Q_r(dY)Q_c(W),
+    &&\text{Dgrad}, \label{eq:dgrad}\\
+  \widehat{dW} &= Q_c(dY)^{\mathsf T}Q_c(X),
+    &&\text{Wgrad}. \label{eq:wgrad}
+\end{align}
+Thus one saved gradient needs a row-oriented payload for Dgrad and a
+column-oriented payload for Wgrad; weights likewise participate in two
+orientations. ``Quantize the tensor to FP4'' is incomplete unless it also
+states which contraction consumes it.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.97\textwidth]{figures/fp4_linear_operand_hybrid.png}
+  \caption{Operand contracts for a linear layer and for the plain-H16
+  operand-wise hybrid. ``Plain H16'' means a block-16 Hadamard with $D=I$ and
+  no sign flips. The hybrid changes Dgrad inside every linear layer;
+  it is distinct from the earlier experiment that assigned whole transformer
+  blocks to different formats.}
+  \label{fig:linear-operand-map}
+\end{figure}
+
+\subsection{Two-dimensional weights: numerical consistency versus implementation}
+
+Independent one-dimensional weight quantizers can produce
+$W_{\mathrm{fwd}}=Q_K(W)$ for Equation~\ref{eq:fprop} and a different
+$W_{\mathrm{bwd}}=Q_N(W)$ for Equation~\ref{eq:dgrad}. Forward and backward
+then consume different numerical approximations of the same BF16 weight.
+Two-dimensional weight quantization instead assigns one scale to each
+$b\times b$ weight tile. Let $q_{\max}$ be the largest finite E2M1 magnitude
+and let $\operatorname{scale}_{\cal S}$ denote the route's scale-selection
+rule on its representable scale set $\cal S$. Then
+\begin{equation}
+  a_{pq}=\max_{i\in p,j\in q}|W_{ij}|, \qquad
+  s_{pq}=\operatorname{scale}_{\cal S}
+  \!\left(\frac{a_{pq}}{S q_{\max}}\right), \qquad
+  \widehat W_{ij}=S\,s_{pq}
+  Q_{\mathrm{E2M1}}\!\left(\frac{W_{ij}}{S\,s_{pq}}\right),
+  \label{eq:2d-weight}
+\end{equation}
+and reuses that numerical encoding in both orientations. The row and column
+layouts can differ in memory, but their decoded weight values agree. This is
+the consistency motivation identified by NVIDIA and by work on
+transposition-invariant block quantization
+\cite{nvidia2025nvfp4,rahimifar2026transposition}.
+Equivalently, the numerical invariant is
+\begin{equation}
+  Q_r^{\mathrm{2D}}(W)\equiv Q_c^{\mathrm{2D}}(W)\equiv\widetilde W,
+  \label{eq:2d-weight-invariant}
+\end{equation}
+even though the two consumer descriptors have different byte layouts.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.96\textwidth]{figures/fp4_2d_weight_contract.png}
+  \caption{One-dimensional quantization can make forward and backward see
+  different weights.  A 2D tile owns one numerical encoding and exposes two
+  consumer layouts.}
+  \label{fig:2d-weight-contract}
+\end{figure}
+
+Transformer Engine (TE), global v5, and the CTA-local path all preserve one
+numerical weight encoding across the two $16\times16$ consumer orientations.
+TE and global v5 use the tensor-level NVFP4 outer scale; global v5 emits the
+E2M1 values, scale metadata, and consumer layouts directly instead of
+materializing TE descriptors. CTA-local NVFP4 keeps the 2D16 consistency
+invariant but replaces the tensor outer scale with the tile-owned factors in
+Equation~\ref{eq:localcta}. Our \mxfp{} path applies the same
+orientation-consistency objective to $32\times32$ MX tiles. Tseng et al.'s
+backward-only MXFP4 method instead
+quantizes each operand along the reduction axis of the current contraction
+\cite{tseng2025mxfp4}. Transpose-consistent 2D32 MXFP4 is prior art
+\cite{cim2026nativemxfp4}; our contribution is to generate both consumer
+layouts inside the fused Llama execution path.
+
+Equation~\ref{eq:2d-weight-invariant} applies to the pure routes and the
+depth-wise hybrid. The operand-wise hybrid is an explicit exception: it reads
+the BF16 weight once, then emits a 2D32 MX weight encoding for Fprop and a 2D16
+CTA-local weight encoding for Dgrad. Wgrad does not consume $W$; it separately
+quantizes $X$ and $dY$ with MXFP4. This gives each contraction a different
+error profile, so end-to-end training must evaluate the tradeoff.
+
+\subsection{Stochastic rounding and signed Hadamard preconditioning}
+
+For adjacent representable values $q_-$ and $q_+$, data stochastic rounding
+(SR) uses
+\begin{equation}
+  \Pr[Q_{\mathrm{SR}}(z)=q_+]
+  =\frac{z-q_-}{q_+-q_-}, \qquad
+  \Pr[Q_{\mathrm{SR}}(z)=q_-]=1-\Pr[Q_{\mathrm{SR}}(z)=q_+],
+  \label{eq:sr}
+\end{equation}
+which is unbiased between the two grid points before saturation
+\cite{gupta2015limited,ozkara2025sr}. This is the ideal probability rule;
+implementations that use too few random bits can introduce bias
+\cite{fitzgibbon2025fewbits}. NVIDIA's
+recommended NVFP4 recipe uses round-to-nearest for weights and activations and
+SR for gradient inputs to both Dgrad and Wgrad \cite{nvidia2025nvfp4}.  Our
+custom long routes are intentionally narrower: data SR is enabled only on the
+row-oriented $dY$ representation consumed by Dgrad. The Wgrad column
+representation, weights, activations, and all scale values remain
+deterministic.
+
+Hadamard preconditioning addresses a different failure mode. One outlier can
+set the scale for a whole block, leaving fewer useful E2M1 values for the other
+entries. A Hadamard transform mixes the block with additions and subtractions
+before quantization, spreading a large coordinate over the block. In Wgrad,
+this can keep smaller contributions from underflowing to zero. The transform
+must be applied to both inputs of the weight-gradient dot product so that it
+cancels in exact arithmetic
+\cite{ashkboos2024quarot,tseng2025mxfp4,nvidia2025nvfp4}. If $H$ is the
+normalized block Hadamard matrix and $R=HD$ uses a sign diagonal $D$, then
+\begin{equation}
+  dW=dY^{\mathsf T}X=(R dY)^{\mathsf T}(R X),
+  \qquad R^{\mathsf T}R=I.
+  \label{eq:paired-rht}
+\end{equation}
+Both Wgrad operands must therefore be transformed as a pair. Transforming only
+$dY$ changes the gradient rather than only changing its quantization basis.
+
+The Hadamard matrix itself is deterministic. In a randomized Hadamard
+transform (RHT), ``randomized'' refers to how the signs in $D$ are selected;
+it does not require a new sign draw at every optimizer step. Tseng et al.
+sample signs and transform both MXFP4 backward GEMMs:
+$(dY,W)$ for Dgrad and $(dY,X)$ for Wgrad, using a 64-value transform in their
+main experiments \cite{tseng2025mxfp4}. NVIDIA's NVFP4 recipe instead
+transforms Wgrad only, using a 16-value Hadamard (H16) for NVFP4 and a 32-value
+Hadamard (H32) for its MXFP4 comparison
+\cite{nvidia2025nvfp4,nvidia2026te}. H16 and H32 name the number of values
+mixed by the transform.
+
+Our custom kernels use one fixed sign diagonal: the H16 path uses the
+16-entry pattern in the referenced TE implementation, and H32 repeats that
+motif over two 16-value halves. We therefore call these paths \emph{fixed-sign
+H16/H32 preconditioning}, rather than RHT. The additions and subtractions mix
+the values; the fixed signs choose which values are negated first. Applying
+the same transform to $X$ and $dY$ preserves the unquantized Wgrad dot product,
+and the stored weight is never transformed. A fixed $D$ remains orthogonal and
+repeatable across layers, steps, and resumes. It does not, however, inherit a
+probabilistic concentration guarantee that assumes $D$ is sampled independently
+of its input. We neither claim that guarantee nor compare alternative sign
+vectors.
+
+Our recipe combines row-oriented SR only for Dgrad with paired fixed-sign
+Hadamard preconditioning only for Wgrad. H16 matches the 16-value NVFP4 scale
+block, while H32 matches the 32-value MXFP4 scale block. Deterministic Hadamard
+preconditioning and transpose-consistent 2D32 MXFP4 have prior art
+\cite{cim2026nativemxfp4}; the contributions here are their integration with
+axis-selective SR, CTA-local two-sided scaling, and fused producer paths. The
+literal sign pattern and its half-block construction are recorded in
+Appendix~\ref{app:implementation}. Table~\ref{tab:recipe-state-ledger} states
+the sign and rounding policy for every route.
+
+\subsection{Reference NVFP4 recipe versus the routes evaluated here}
+
+The NVIDIA recipe is a bundle, not only the NVFP4 datatype. It recommends
+2D16 weights, SR on gradient inputs to Dgrad and Wgrad, a paired H16 signed
+Hadamard transform (described as RHT) for
+Wgrad, and retaining roughly 15\% of empirically sensitive linears in higher
+precision, with most selected linears near the end of the network
+\cite{nvidia2025nvfp4}. Three distinctions matter in this report. First, our
+TE-native comparator enables TE's 2D, gradient-SR, and signed-Hadamard
+mechanisms but places all 32 body blocks in NVFP4; only the common output head
+is BF16. Second, the TE comparator with four final BF16 blocks is a separate
+NVIDIA-inspired route. It is not a reproduction of NVIDIA's per-linear
+sensitivity list. Third, the custom v5, \mxfp{}, and \localcta{} long routes
+use row-Dgrad SR, and only explicitly named routes apply Hadamard
+preconditioning. Tables~\ref{tab:recipe-ledger}
+and~\ref{tab:recipe-state-ledger} state the complete contract for each result.
+\FloatBarrier

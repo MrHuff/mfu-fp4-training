@@ -1,0 +1,103 @@
+# syntax=docker/dockerfile:1
+FROM nvcr.io/nvidia/pytorch:25.10-py3
+
+# ==============================================================================
+# 1. GLOBAL ENVIRONMENT & COMPILER FLAGS
+# ==============================================================================
+ENV DEBIAN_FRONTEND=noninteractive
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+ENV TZ=Etc/UTC
+ENV UV_COMPILE_BYTECODE=1 
+ENV UV_PREVIEW=1 
+
+# --- COMPILER & ARCHITECTURE SETUP ---
+# Targets GB200 (Blackwell SM100) specifically
+ENV NVTE_CUDA_ARCHS="100a"
+ENV TORCH_CUDA_ARCH_LIST="10.0"
+
+# Tell CMake/NVCC to use the system GCC/G++
+ENV CMAKE_CUDA_HOST_COMPILER=/usr/bin/gcc
+ENV CXX=/usr/bin/g++
+ENV CC=/usr/bin/gcc
+
+# Ensure CUDA binaries are in PATH
+ENV PATH="/usr/local/cuda-13.0/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/cuda-13.0/lib64:${LD_LIBRARY_PATH}"
+
+# Optimization: Use ccache
+ENV CMAKE_CXX_COMPILER_LAUNCHER=ccache
+ENV CMAKE_CUDA_COMPILER_LAUNCHER=ccache
+ENV NVTE_FRAMEWORK=pytorch
+
+# ==============================================================================
+# 2. SYSTEM DEPENDENCIES
+# ==============================================================================
+# Added 'tzdata' to handle the AWS CLI timezone prompt automatically
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget curl ca-certificates build-essential dkms \
+    git openssh-server nano cmake ninja-build ccache \
+    python3-dev python3-pip tmux unzip tzdata psmisc \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone \
+    && rm -rf /var/lib/apt/lists/*
+
+# ==============================================================================
+# 4. AWS CLI
+# ==============================================================================
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" \
+    && unzip -q awscliv2.zip \
+    && ./aws/install \
+    && rm -rf aws awscliv2.zip
+
+# ==============================================================================
+# 5. PYTHON SETUP (UV)
+# ==============================================================================
+# Force installation to /usr/local/bin so it is automatically in PATH
+ENV UV_INSTALL_DIR="/usr/local/bin"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+
+# Install modern CMake (Critical for CUDA 13)
+
+# ==============================================================================
+# 6. CUSTOM WHEELS (Pre-requisites)
+# ==============================================================================
+# We install these BEFORE the main repo to ensure they are used.
+# These are the specific ARM64 wheels from your S3 bucket.
+
+# ==============================================================================
+# 7. BUILD PROJECT
+# ==============================================================================
+# 7. BUILD PROJECT
+# ==============================================================================
+# ==============================================================================
+# 7. BUILD PROJECT
+# ==============================================================================
+WORKDIR /opt/mfu/EXTERNAL_PATH
+COPY pyproject.toml ./
+COPY TransformerEngine ./TransformerEngine
+
+RUN pip uninstall -y transformer-engine --break-system-packages
+RUN uv pip install --system setuptools wheel packaging cmake ninja --break-system-packages
+# CRITICAL 1: Remove existing lockfile to force a fresh resolution for ARM64.
+RUN echo "--- Building Custom TransformerEngine for Blackwell ---" && \
+    cd TransformerEngine && \
+    export MAX_JOBS=2 && \
+    uv pip install --system . --no-build-isolation -vv --break-system-packages
+
+RUN python -c "import torch; print(f'---> SUCCESS: Torch {torch.__version__} found in {torch.__file__}')"
+
+COPY . .
+
+# Install the main project
+RUN uv pip install --system -e . --no-build-isolation --break-system-packages
+
+
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+
+# Create the directory for the sshd daemon
+RUN mkdir -p /var/run/sshd
+
+# Set a default command to start the SSH server
+CMD ["/usr/sbin/sshd", "-D"]
