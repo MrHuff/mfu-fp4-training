@@ -29,26 +29,43 @@ Relative to the established methods summarized in
 Table~\ref{tab:prior-work-boundary}, we contribute:
 
 \begin{itemize}
-  \item \emph{Format-aware FP4 execution.} For native \mxfp{}, global \nvfp{},
-        and \localcta{}, fused QKV/RoPE and gated-FFN producers complete each
-        scale domain and emit the layouts and saved state required by forward
-        and backward. The CTA-local path replaces tensor-global amax with two
-        tile-owned FP32 outer factors applied after the Tensor Core reduction.
-  \item \emph{Operand-specific \mxfp{} scale selection and 2D weights.} We
-        expose upward encode-centric and downward decode-centric E8M0 rounding
-        as an explicit policy. Reported activation and gradient paths use the
-        encode-centric rule, while 2D32 weight tiles conditionally select the
-        finer scale. Fused 2D16 and 2D32 producers emit transpose-consistent
-        consumer layouts from one numerical encoding.
-  \item \emph{Axis-selective backward rounding and preconditioning.}
-        Adjacent-bin SR acts only on the row-facing $dY$ consumed by Dgrad.
-        The column-facing Wgrad carriers remain deterministic and may instead
-        receive paired fixed-sign H16 or H32 preconditioning. This separates
-        two numerical treatments of the same gradient tensor by consumer.
-  \item \emph{Hybrid designs and end-to-end evidence.} We evaluate both
-        depth-wise format assignment and an operand-wise hybrid motivated by
-        same-state Dgrad error analysis. The evidence spans 160B-token
-        training, throughput, checkpoint-matched validation, and downstream
-        comparisons of complete recipes. Appendix~\ref{app:code-release} links
-        the public code, pinned kernel sources, recipes, and figure builders.
+  \item \emph{Numerical parameterization and operand contracts.} We make the
+        \mxfp{} E8M0 scale direction an explicit route parameter: reported
+        activation and gradient operands use upward, encode-centric scaling,
+        while 2D32 weight tiles conditionally select a twice-finer scale under
+        a fixed tile-maximum test. We integrate established
+        orientation-consistent $16\!\times\!16$ and $32\!\times\!32$ weight
+        encodings (2D16 and 2D32) into the custom route contracts. Global v5
+        returns both packed weight views under one 2D16 encoding; MXFP4 and
+        CTA-local fused producers emit both consumer layouts from one numerical
+        encoding; and the operand hybrid emits distinct encodings from one BF16
+        weight-tile load. We also separate the two representations of $dY$:
+        adjacent-bin SR acts only on the row-facing data gradient (Dgrad),
+        while Wgrad uses deterministic column-facing carriers
+        and, in designated routes, paired fixed-sign H16 or H32
+        preconditioning. The rounding rules, 2D consistency principle, SR
+        estimator, and Hadamard transform are established; our contribution is
+        their operand-specific parameterization and fused composition.
+
+  \item \emph{Format-aware fusion and native execution.} We implement native
+        \mxfp{}, tensor-global \nvfp{}, and \localcta{} around their distinct
+        scale-completion boundaries. The producers fuse or overlap
+        RMSNorm--QKV--RoPE and gated-FFN forward and backward work while
+        emitting scale metadata, retained state, and the physical layouts
+        required by each consumer. Global v5 overlaps the tensor-wide maximum;
+        \localcta{} instead carries two tile-owned FP32 outer factors across
+        the contraction and applies their product in the GEMM epilogue.
+
+  \item \emph{End-to-end empirical evaluation.} We implement and evaluate the
+        custom pure and hybrid routes alongside BF16 and TE comparators. The
+        hybrid designs include depth-wise format assignment and an operand-wise
+        assignment motivated by same-state Dgrad error analysis. The evidence
+        comprises matched throughput probes, trajectories through 160B
+        training tokens, checkpoint-matched fixed-stream validation, and
+        downstream evaluation of the complete recipes.
+
+  \item \emph{Public reproducibility release.} We release the training and
+        evaluation code, pinned kernel sources, complete recipe ledger,
+        publication data, and figure builders. Appendix~\ref{app:code-release}
+        describes the repository and its reproducibility contract.
 \end{itemize}

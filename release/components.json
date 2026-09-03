@@ -6,7 +6,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_2d_weight_contract.png",
-      "sha256": "37c1813d0da1915783a5559b79546227a9d240fbace515eca194f43f29410bd3"
+      "sha256": "bb509ed3081f1c033511cecafb2cc021da7531881f60b9896858bb7557e7a095"
     },
     {
       "path": "docs/technical_report/figures/fp4_cce_nvfp4_pcache_gate.png",
@@ -18,7 +18,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "fc0be26c3d307b8f1d48a598d062446ada560209e5f32d2ea8c004d67c5caa36"
+      "sha256": "2c609d072cdc06a6312d06bff13e625f2b672fb0ce336cc50d0741b12e11bcdf"
     },
     {
       "path": "docs/technical_report/figures/fp4_fusion_dataflow.png",
@@ -65,7 +65,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_2d_weight_contract.png",
-      "sha256": "37c1813d0da1915783a5559b79546227a9d240fbace515eca194f43f29410bd3",
+      "sha256": "bb509ed3081f1c033511cecafb2cc021da7531881f60b9896858bb7557e7a095",
       "source_component": "."
     },
     {
@@ -80,7 +80,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "fc0be26c3d307b8f1d48a598d062446ada560209e5f32d2ea8c004d67c5caa36",
+      "sha256": "2c609d072cdc06a6312d06bff13e625f2b672fb0ce336cc50d0741b12e11bcdf",
       "source_component": "."
     },
     {
@@ -135,7 +135,7 @@
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
       "file_count": 588,
-      "file_ledger_sha256": "72c796728d65ed7362958d027a0eb3fb45e06d628d5aaf3ff2f7bcb5229869ca",
+      "file_ledger_sha256": "8b8c6433b2ca1ddd5f4892b352de45d1edecf699a17e7ff8640af73efb747819",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [

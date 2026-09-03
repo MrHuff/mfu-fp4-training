@@ -205,7 +205,7 @@ def make_fusion_dataflow() -> None:
 
 
 def make_format_execution_routes() -> None:
-    """Show why the three FP4 formats require different producer schedules."""
+    """Show why the three custom scale contracts require different schedules."""
     fig, axes = plt.subplots(3, 1, figsize=(10.8, 7.0))
     rows = [
         (
@@ -250,7 +250,7 @@ def make_format_execution_routes() -> None:
             previous = x + width
         ax.text(0.50, 0.12, note, ha="center", color=MID, fontsize=9.2)
     fig.suptitle(
-        "The datatype determines the fusion and synchronization boundary",
+        "The scale contract determines the fusion and synchronization boundary",
         fontsize=13,
         fontweight="bold",
         y=0.995,
@@ -352,8 +352,8 @@ def make_2d_weight_contract() -> None:
     right.text(
         0.50,
         0.14,
-        "TE-native, v5, and localCTA use $b=16$; MXFP4 uses $b=32$.\n"
-        "Our native v5/localCTA/MX producers emit TK-ready layouts directly.",
+        "TE/global v5 and CTA-local use $b=16$; MXFP4 uses $b=32$.\n"
+        "Custom MXFP4 and CTA-local producers fuse dual-layout emission.",
         ha="center",
         fontsize=8.5,
         color=MID,

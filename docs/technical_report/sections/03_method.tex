@@ -31,6 +31,8 @@ both physical orientations needed by Fprop, Dgrad, and Wgrad, and retains the
 BF16 and random state required by autograd. Those obligations differ across
 MXFP4, global NVFP4, and CTA-local NVFP4, so one generic quantize--GEMM fusion
 schedule cannot represent all three paths.
+Figure~\ref{fig:qkv-ffn-fusion} contrasts the serial boundaries with this
+format-aware production schedule.
 
 \subsection{What is fused in a Llama block}
 
@@ -49,10 +51,10 @@ its consumers require.
   boundaries. Solid boxes and arrows show values produced and consumed within
   one execution boundary; they do not imply one monolithic kernel. Purple
   dashed arrows show stream overlap. Distributed collectives remain separate
-  operations even when their launch overlaps local work. Row stochastic
-  rounding (SR) applies only to the gradient view consumed by Dgrad. A paired
-  fixed-sign Hadamard transform (H), when enabled, applies to both column
-  operands consumed by Wgrad.}
+  operations even when their launch overlaps local work. In panels B and D,
+  row stochastic rounding (SR) applies only to the gradient view consumed by
+  Dgrad; a paired fixed-sign Hadamard transform (H), when enabled, applies to
+  both column operands consumed by Wgrad.}
   \label{fig:qkv-ffn-fusion}
 \end{figure}
 
@@ -106,6 +108,8 @@ Concretely, every linear uses \mxfp{}-v4 for Fprop and Wgrad and
 gradient tile once and emits both the CTA-local row representation and the MX
 column representation. The weight producer likewise loads BF16 $W$ once and
 emits the MX forward view and the CTA-local Dgrad view.
+The lower panel of Figure~\ref{fig:linear-operand-map} shows this
+contraction-wise assignment for the plain-H16 variant.
 
 We evaluate two Wgrad variants. The plain-H16 variant applies the same
 16-value Hadamard mixing to $X$ and $dY$ with $D=I$, so it performs no sign
