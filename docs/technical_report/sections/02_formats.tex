@@ -164,6 +164,9 @@ both quantization error and when the producer may safely release its output.
 \end{table}
 \FloatBarrier
 
+\subsubsection{MXFP4 encode- and decode-centric scale selection}
+\label{sec:mxfp4-scale-direction}
+
 E8M0 represents a power-of-two scale with eight exponent bits and no fraction;
 E4M3 is an FP8 scale with four exponent and three fraction bits. In \mxfp{},
 $S=1$, $s_b$ is an E8M0 power of two shared by 32 values, and the effective
@@ -227,6 +230,8 @@ gradient payload; it does not randomize the E8M0 scale exponent.
   $a_T/s_T<0.87$ condition.}
   \label{fig:mxfp4-scale-rounding}
 \end{figure}
+
+\subsubsection{Global and CTA-local NVFP4 outer scales}
 
 Global \nvfp{} instead uses an E4M3 scale for
 each 16 values and an FP32 tensor scale $S$ \cite{ocp2023mx,nvidia2025nvfp4}.

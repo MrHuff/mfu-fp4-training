@@ -1,21 +1,19 @@
 \section{Introduction}
 
 Four-bit floating-point (FP4) Tensor Cores accelerate general matrix
-multiplication (GEMM), but GEMM is only part of a large language model (LLM)
-training step. Each FP4 linear layer must also compute scales, round and pack
-values, build the row- and column-oriented layouts consumed in forward and
-backward, and retain the state needed by autograd. Separate kernels repeatedly
-move large bfloat16 (BF16) intermediates through high-bandwidth memory (HBM).
-The surrounding work can consume the Tensor Core gain even when the FP4 GEMM
-itself is efficient \cite{nvidia2025nvfp4}.
+multiplication (GEMM), but each training layer must also produce scales, pack
+values, build forward and backward layouts, and retain autograd state. When
+separate kernels move bfloat16 (BF16) intermediates through high-bandwidth
+memory (HBM), this surrounding work can erase the GEMM speedup
+\cite{nvidia2025nvfp4}.
 
-We address this gap with \emph{format-aware fusion}. Each activation or
-gradient producer emits the scales, physical layouts, and saved state required
-by the next operation. The schedule follows the format's scale domain:
-\mxfp{} completes a local 32-value scale, global \nvfp{} waits for a
-tensor-wide maximum, and cooperative-thread-array-local (CTA-local) \nvfp{}
-completes two outer scales within the tile that owns the matrix multiplication.
-The profitable fusion boundary therefore differs by format.
+We address this gap with \emph{format-aware fusion}: each producer completes
+its format-specific scale domain while emitting the layouts and saved state
+required by its consumers. \mxfp{} completes a local 32-value scale, global
+\nvfp{} waits for a tensor-wide maximum, and cooperative-thread-array-local
+(CTA-local) \nvfp{} completes two outer scales inside the tile that owns the
+matrix multiplication. The profitable fusion boundary therefore differs by
+format.
 
 We evaluate the resulting paths in Llama-3-family 8B pretraining at sequence length
 8,192 and global batch 512. Same-accelerator probes measure every route with a
@@ -27,22 +25,30 @@ tokens/s/GPU and ends 2.11\% above the raw BF16 endpoint. The TE-native and
 four-final-BF16-block trajectories end 1.34\% and 0.87\% above raw BF16,
 respectively, at measured throughputs of 27.6K and 27.1K tokens/s/GPU.
 
-This report makes three contributions:
+Relative to the established methods summarized in
+Table~\ref{tab:prior-work-boundary}, we contribute:
 
 \begin{itemize}
-  \item Native, format-specific execution paths that fuse scale production,
-        physical layouts, and saved backward state. The fastest custom path
-        reaches 37.9K tokens/s/GPU in the common compiled-CE probe.
-  \item An operand-specific MXFP4 scale policy and its fused realization.
-        Development-only pretraining screens favored upward E8M0 rounding for
-        activation and gradient operands. The 2D32 weight path instead selects
-        the next smaller scale when the normalized tile maximum is below 0.87,
-        trading upper-tail clipping for a twice-finer grid. Across routes,
-        adjacent-bin SR acts only on the row-facing Dgrad input, paired
-        fixed-sign H16/H32 preconditioning acts only in Wgrad, and each pure or
-        depth-assigned format supplies transpose-consistent weight layouts.
-  \item A 160B-token comparison of pure and hybrid routes, supported by
-        same-state operator analysis, checkpoint-matched validation, and
-        downstream evaluation. Appendix~\ref{app:code-release} links the
-        public code, pinned kernel sources, recipes, and figure builders.
+  \item \emph{Format-aware FP4 execution.} For native \mxfp{}, global \nvfp{},
+        and \localcta{}, fused QKV/RoPE and gated-FFN producers complete each
+        scale domain and emit the layouts and saved state required by forward
+        and backward. The CTA-local path replaces tensor-global amax with two
+        tile-owned FP32 outer factors applied after the Tensor Core reduction.
+  \item \emph{Operand-specific \mxfp{} scale selection and 2D weights.} We
+        expose upward encode-centric and downward decode-centric E8M0 rounding
+        as an explicit policy. Reported activation and gradient paths use the
+        encode-centric rule, while 2D32 weight tiles conditionally select the
+        finer scale. Fused 2D16 and 2D32 producers emit transpose-consistent
+        consumer layouts from one numerical encoding.
+  \item \emph{Axis-selective backward rounding and preconditioning.}
+        Adjacent-bin SR acts only on the row-facing $dY$ consumed by Dgrad.
+        The column-facing Wgrad carriers remain deterministic and may instead
+        receive paired fixed-sign H16 or H32 preconditioning. This separates
+        two numerical treatments of the same gradient tensor by consumer.
+  \item \emph{Hybrid designs and end-to-end evidence.} We evaluate both
+        depth-wise format assignment and an operand-wise hybrid motivated by
+        same-state Dgrad error analysis. The evidence spans 160B-token
+        training, throughput, checkpoint-matched validation, and downstream
+        comparisons of complete recipes. Appendix~\ref{app:code-release} links
+        the public code, pinned kernel sources, recipes, and figure builders.
 \end{itemize}
