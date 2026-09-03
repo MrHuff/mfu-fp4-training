@@ -349,12 +349,17 @@ column-facing representations to the three contractions.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.97\textwidth]{figures/fp4_linear_operand_hybrid.png}
-  \caption{Contraction-specific layouts and the plain-H16 operand-wise hybrid.
-  Top: Fprop, Dgrad, and Wgrad require distinct row- and column-facing views.
-  Bottom: the hybrid assigns MXFP4 to Fprop/Wgrad and CTA-local NVFP4 with
-  row-$dY$ SR to Dgrad; one fused backward stage emits both representations
-  from the BF16 gradient tile. Plain H16 uses no sign flips. The fixed-H32 variant
-  keeps this format map and changes only the paired Wgrad preconditioner.}
+  \caption{Formats and packed views for the plain-H16 operand hybrid. Here
+  $r$ and $c$ denote the consumer-facing row- and column-packed scale/layout
+  representations; they do not change a tensor's logical shape. Top: Fprop
+  consumes row-facing $X$ and $W$, Dgrad consumes row-facing $dY$ and
+  column-facing $W$, and Wgrad consumes column-facing $dY$ and $X$. Bottom:
+  Fprop uses MXFP4 $X_r$ and 2D32 $W_r$; Dgrad uses CTA-local NVFP4
+  $dY_r$ with row stochastic rounding (SR) and 2D16 $W_c$; Wgrad uses MXFP4
+  $dY_c$ and $X_c$ with paired plain-H16 preconditioning. One fused backward
+  producer emits both $dY$ representations from the BF16 tile. Wgrad does not
+  read $W$ because it produces $dW$. Plain H16 has no sign flips; fixed H32
+  changes only the paired Wgrad preconditioner.}
   \label{fig:linear-operand-map}
 \end{figure}
 \FloatBarrier

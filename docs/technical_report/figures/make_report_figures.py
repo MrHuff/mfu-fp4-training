@@ -262,51 +262,92 @@ def make_format_execution_routes() -> None:
 
 def make_linear_operand_map() -> None:
     """Map quantized operands to Fprop, Dgrad, and Wgrad."""
-    fig, axes = plt.subplots(2, 1, figsize=(10.8, 6.8))
+    fig, axes = plt.subplots(2, 1, figsize=(11.6, 7.4))
     top, bottom = axes
     for ax in axes:
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.axis("off")
 
-    top.set_title("One linear layer creates three different FP4 contractions")
+    top.set_title("A linear layer needs a different operand view for each contraction")
     columns = [
-        (0.02, "Fprop", "$\\widehat{Y}=Q_r(X)Q_r(W)^{\\mathsf{T}}$", "row-facing activation and weight"),
-        (0.345, "Dgrad", "$\\widehat{dX}=Q_r(dY)Q_c(W)$", "row $dY$; column-facing weight"),
-        (0.67, "Wgrad", "$\\widehat{dW}=Q_c(dY)^{\\mathsf{T}}Q_c(X)$", "column-facing gradient and activation"),
+        (
+            0.02,
+            "Forward (Fprop)",
+            "$\\widehat{Y}=Q_r(X)Q_r(W)^{\\mathsf{T}}$",
+            "$X$: row-facing   |   $W$: row-facing",
+        ),
+        (
+            0.345,
+            "Input gradient (Dgrad)",
+            "$\\widehat{dX}=Q_r(dY)Q_c(W)$",
+            "$dY$: row-facing   |   $W$: column-facing",
+        ),
+        (
+            0.67,
+            "Weight gradient (Wgrad)",
+            "$\\widehat{dW}=Q_c(dY)^{\\mathsf{T}}Q_c(X)$",
+            "$dY$: column-facing   |   $X$: column-facing",
+        ),
     ]
     for x, title, equation, note in columns:
-        _box(top, x, 0.48, 0.29, 0.30, title + "\n" + equation, BLUE)
-        top.text(x + 0.145, 0.33, note, ha="center", fontsize=9.2, color=MID)
+        _box(top, x, 0.46, 0.29, 0.32, title + "\n" + equation, BLUE)
+        top.text(x + 0.145, 0.30, note, ha="center", fontsize=8.8, color=MID)
     top.text(
         0.50,
-        0.10,
-        "The same BF16 tensor needs row- and column-facing scale/layout views for different contractions.",
+        0.09,
+        "$r$ and $c$ denote consumer-facing row- and column-packed scale/layout views; the logical shape does not change.",
         ha="center",
         fontsize=9.4,
         color=DARK,
     )
 
-    bottom.set_title("Operand hybrid: assign a format to each contraction")
+    bottom.set_title("Operand hybrid: numerical format and view for every matrix input")
     hybrid = [
-        (0.02, "Fprop", "MXFP4\n2D weight; untransformed", BLUE),
-        (0.345, "Dgrad", "CTA-local NVFP4\nrow-$dY$ data SR", TEAL),
-        (0.67, "Wgrad", "MXFP4\npaired plain H16", PURPLE),
+        (
+            0.02,
+            "Forward (Fprop)",
+            "$X$: row-facing MXFP4\n$W$: row-facing MXFP4 (2D32)",
+            BLUE,
+        ),
+        (
+            0.345,
+            "Input gradient (Dgrad)",
+            "$dY$: row-facing CTA-local NVFP4 + row SR\n"
+            "$W$: column-facing CTA-local NVFP4 (2D16)",
+            TEAL,
+        ),
+        (
+            0.67,
+            "Weight gradient (Wgrad)",
+            "$dY$: column-facing MXFP4 + plain H16\n"
+            "$X$: column-facing MXFP4 + plain H16",
+            PURPLE,
+        ),
     ]
     for x, title, body, color in hybrid:
-        _box(bottom, x, 0.46, 0.29, 0.32, title + "\n" + body, color)
+        _box(
+            bottom,
+            x,
+            0.43,
+            0.29,
+            0.38,
+            title + "\n" + body,
+            color,
+            font_size=8.7,
+        )
     bottom.text(
         0.50,
-        0.24,
-        "A fused backward stage reads each BF16 gradient tile once and emits an MXFP4 column view for Wgrad and a CTA-local row view for Dgrad.",
+        0.22,
+        "One fused backward producer turns a BF16 $dY$ tile into both required FP4 views.",
         ha="center",
         fontsize=9.3,
         color=DARK,
     )
     bottom.text(
         0.50,
-        0.09,
-        "The plain-H16 version changes only the Wgrad preconditioner relative to the fixed-H32 version.",
+        0.08,
+        "Fixed H32 changes only the paired Wgrad transform; the formats and row/column views stay the same.",
         ha="center",
         fontsize=9.3,
         color=MID,

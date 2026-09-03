@@ -26,7 +26,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_linear_operand_hybrid.png",
-      "sha256": "8a67588760f6ec9bce9345862da9800410d2de18e4770a9f23efd2332b2cd7f7"
+      "sha256": "e2a168ce374bf78fcc09d1cd12533eb9ae5d6654a61eb7e9355ed33e8080697f"
     },
     {
       "path": "docs/technical_report/figures/fp4_localcta_scaling.png",
@@ -90,7 +90,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_linear_operand_hybrid.png",
-      "sha256": "8a67588760f6ec9bce9345862da9800410d2de18e4770a9f23efd2332b2cd7f7",
+      "sha256": "e2a168ce374bf78fcc09d1cd12533eb9ae5d6654a61eb7e9355ed33e8080697f",
       "source_component": "."
     },
     {
@@ -135,7 +135,7 @@
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
       "file_count": 588,
-      "file_ledger_sha256": "3c64c19d7d90e84ef062952ca83f64787f8312da23db4be13e450a4125aa7942",
+      "file_ledger_sha256": "d4679b69637e9d80c6c908e2212273a466dafef700b1d71c240a9714f3d4468e",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [

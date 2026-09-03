@@ -79,9 +79,7 @@ display-only fit described below.
   observations recorded at the same step as BF16. The dashed
   custom-global-\nvfp{} line is a smoothed visual guide through those sparse
   observations, not additional measurements. Appendix~\ref{app:reproducibility}
-  records the surviving data sources. The 27/5 depth hybrid
-  joins three logged training segments at exact checkpoint boundaries, with
-  no interpolated values.}
+  records the surviving data sources.}
   \label{fig:llama8b-loss}
 \end{figure}
 
@@ -92,8 +90,7 @@ the late loss separation at the same scale without extrapolating any route.
   \centering
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss_zoom.png}
   \caption{Training loss from 120B to 160B tokens. Diamonds mark exact logged
-  endpoints. The 27/5 curve uses its complete logged history without
-  interpolation. As in Figure~\ref{fig:llama8b-loss}, the late
+  endpoints. As in Figure~\ref{fig:llama8b-loss}, the late
   custom-global-\nvfp{} markers are exact observations and the dashed curve is
   a smoothed visual guide, not additional measurements.}
   \label{fig:llama8b-loss-zoom}
