@@ -3,8 +3,9 @@
 
 \subsection{Fuse the complete producer--consumer boundary}
 
-Quantization helps only when its preparation work fits under the matrix
-multiplication. We model the latency of one FP4 boundary by its critical path:
+Quantization helps only when its preparation work overlaps the matrix
+multiplication rather than extending the critical path. We model the latency
+of one FP4 boundary as
 \begin{equation}
   T_{\mathrm{boundary}} \approx T_{\mathrm{serial}} +
   \max\!\left(T_{\mathrm{GEMM}},
@@ -26,23 +27,57 @@ residual update into the next RMSNorm. Each has a corresponding backward
 boundary.
 
 Our FP4 boundary contract makes the fusion boundary explicit: a producer
-completes the format's scale domain, emits
+completes the group of values that share a scale, emits
 both physical orientations needed by Fprop, Dgrad, and Wgrad, and retains the
-BF16 and random state required by autograd. Those obligations differ across
-MXFP4, global NVFP4, and CTA-local NVFP4, so one generic quantize--GEMM fusion
-schedule cannot represent all three paths.
+BF16 and random state required by autograd. Scale completion, layout
+production, and saved-state requirements differ across MXFP4, custom global
+NVFP4, and CTA-local NVFP4, so one generic quantize--GEMM fusion schedule
+cannot represent all three paths.
 Figure~\ref{fig:qkv-ffn-fusion} contrasts the serial boundaries with this
 format-aware production schedule.
 
 \subsection{What is fused in a Llama block}
 
-The system presents four execution panels in
-Figure~\ref{fig:qkv-ffn-fusion}: QKV forward and backward, and FFN forward and
-backward. The serial schedule writes BF16 intermediates to high-bandwidth
+Figure~\ref{fig:qkv-ffn-fusion} presents four execution panels:
+QKV forward and backward, and FFN forward and backward. The serial schedule
+writes BF16 intermediates to high-bandwidth
 memory (HBM), reads them back to compute scales and layouts, and repeats that
 cycle before the next GEMM. The fused schedule instead makes each producer
 emit the exact scale metadata, row and column views, and saved BF16 state that
 its consumers require.
+
+For a fixed route, fusion preserves the defined numerical contract. It removes
+intermediate traffic and exposes independent work to the scheduler. The scale stage is nevertheless
+format-specific: \mxfp{} completes a local 32-value reduction; custom global
+\nvfp{} starts a tensor-wide maximum early; and \localcta{} carries two tile
+outer scales through the complete contraction and applies their product in the
+GEMM epilogue.
+
+The gated FFN illustrates why the boundary extends beyond a GEMM. It has gate
+and up projections ($W_1$ and $W_3$), followed by a down projection ($W_2$).
+Writing the $W_1$ and $W_3$ outputs to BF16, launching a separate
+SiLU--multiply, then reading the result again to quantize the $W_2$ input
+spends bandwidth between every large contraction. The fused path schedules the
+paired projections together and emits the FP4 input to $W_2$ with the
+SiLU--gate output. In backward, it combines the $W_2$ data gradient with the
+SiLU derivative and produces the representations consumed by the $W_1$ and
+$W_3$ data- and weight-gradient contractions. Exact BF16 values remain
+available where autograd
+requires them; fusion changes data movement, not the model definition.
+
+QKV follows the same principle. The normalized input producer emits the
+format-specific representations consumed by the grouped projection, and the
+Q/K projection applies RoPE and the required layout. Backward combines inverse
+layout, RoPE, QKV gradient production, and the adjacent RMSNorm reduction when
+their data dependencies align. Residual--RMSNorm retains the exact residual
+and row statistics while producing the next quantized representations.
+
+Scale work is scheduled by format. \mxfp{} reductions finish with each local
+tile. Custom global \nvfp{} begins the tensor maximum-absolute-value reduction
+early so scale finalization can
+overlap other work. \localcta{} removes that global dependency, but its two
+outer scales must remain available through the full K reduction.
+Figure~\ref{fig:format-execution-routes} summarizes these schedules.
 
 \begin{figure}[tbp]
   \centering
@@ -58,56 +93,29 @@ its consumers require.
   \label{fig:qkv-ffn-fusion}
 \end{figure}
 
-For a fixed route, fusion preserves the defined numerical contract. It removes
-intermediate traffic and exposes independent work to the scheduler. The scale stage is nevertheless
-format-specific: \mxfp{} completes a local 32-value reduction; global
-\nvfp{} starts a tensor-wide maximum early; and \localcta{} carries two tile
-outer scales through the complete contraction and applies their product in the
-GEMM epilogue.
-
-The gated FFN illustrates why the boundary extends beyond a GEMM.
-Writing W1 and W3 outputs to BF16, launching a separate SiLU--multiply, then
-reading the result again to quantize W2's input spends bandwidth between every
-large contraction. The fused path schedules the paired projections together
-and emits W2's FP4 input with the SiLU--gate output. In backward, it combines
-W2 Dgrad with the SiLU derivative and produces the representations consumed by
-W1/W3 Dgrad and Wgrad. Exact BF16 values remain available where autograd
-requires them; fusion changes data movement, not the model definition.
-
-QKV follows the same principle. The normalized input producer emits the
-format-specific representations consumed by the grouped projection, and the
-Q/K projection applies RoPE and the required layout. Backward combines inverse
-layout, RoPE, QKV gradient production, and the adjacent RMSNorm reduction when
-their data dependencies align. Residual--RMSNorm retains the exact residual
-and row statistics while producing the next quantized representations.
-
-Scale work is scheduled by format. \mxfp{} reductions finish with each local
-tile. Global \nvfp{} begins the tensor amax early so scale finalization can
-overlap other work. \localcta{} removes that global dependency, but its two
-outer scales must remain available through the full K reduction.
-Figure~\ref{fig:format-execution-routes} summarizes these schedules.
-
 \subsection{Depth-wise and operand-wise hybrids}
 
-The \emph{depth-wise} hybrid assigns complete transformer blocks 1--27 to
-\localcta{} and blocks 28--32 to \mxfp{}. Attention and FFN linears follow the
+We call the \emph{depth-wise} route the 27/5 hybrid: it assigns complete
+transformer blocks 1--27 to \localcta{} and blocks 28--32 to \mxfp{}.
+Attention and FFN linears follow the
 assigned block, so Fprop, Dgrad, and Wgrad never mix formats within one linear.
 Both formats use orientation-consistent 2D weights and row-only gradient-data
 SR; neither uses Hadamard preconditioning.
 
 The \emph{operand-wise} hybrid instead chooses the format per contraction. A
-same-state operator analysis found lower Dgrad error for \localcta{} than for
-\mxfp{} in every measured layer and component. This motivates replacing
+controlled operator analysis using identical saved tensors found lower Dgrad
+error for \localcta{} than for \mxfp{} in every measured layer and component.
+This motivates replacing
 \mxfp{} Dgrad with \localcta{} while retaining the \mxfp{} Fprop
 and Wgrad path. The diagnostic and its scope are
 reported in Section~\ref{sec:results} and
 Appendix~\ref{app:dgrad-diagnostic}.
 
-Concretely, every linear uses \mxfp{}-v4 for Fprop and Wgrad and
-\localcta{}-v4 with row-data SR for Dgrad. One producer loads each BF16
-gradient tile once and emits both the CTA-local row representation and the MX
-column representation. The weight producer likewise loads BF16 $W$ once and
-emits the MX forward view and the CTA-local Dgrad view.
+Concretely, every linear uses \mxfp{} for Fprop and Wgrad and
+\localcta{} with row-data SR for Dgrad. One producer loads each BF16
+gradient tile once and emits both the CTA-local row representation and the
+MXFP4 column representation. The weight producer likewise loads BF16 $W$ once and
+emits the MXFP4 forward view and the CTA-local Dgrad view.
 The lower panel of Figure~\ref{fig:linear-operand-map} shows this
 contraction-wise assignment for the plain-H16 variant.
 
@@ -122,5 +130,5 @@ gives the sign construction.
 
 Every main custom route retains a BF16 output projection and compiled regular cross
 entropy. Appendix~\ref{app:output-head} summarizes the low-precision output
-heads that did not improve the end-to-end speed--numerics tradeoff.
+heads that did not improve the end-to-end throughput--numerical tradeoff.
 \FloatBarrier

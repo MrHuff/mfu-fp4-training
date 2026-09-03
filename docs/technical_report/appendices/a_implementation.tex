@@ -10,40 +10,42 @@ weight gradients, relative RMS error, and zero fractions before model timing.
 
 Row- and column-oriented scales are distinct numerical state, not
 interchangeable layout metadata. Tensors returned to autograd cannot alias a
-workspace whose lifetime ends with the producing stream. Delayed FP4 prefetch
-has one owner and one release point. Distributed measurements use per-rank
-timing and dispatch evidence because the slowest rank gates the step.
+workspace whose lifetime ends with the producing stream. Each delayed FP4
+prefetch buffer has one owner and is released exactly once, preventing
+asynchronous work from outliving its storage. Distributed measurements use
+per-GPU timing and dispatch evidence because the slowest GPU sets the step
+time.
 
 \subsection{Weight orientation and the fixed sign pattern}
 
-The custom-global-NVFP4 path creates one 2D16 numerical weight
+The custom global NVFP4 path creates one 2D16 numerical weight
 encoding and exposes it in both consumer layouts. The native 2D32 \mxfp{} path
 follows the same orientation-consistency rule.
 
 The signed-Hadamard paths use the fixed literal \texttt{0x00002817}. Under the
 custom kernel's convention, a set bit denotes $+1$ and a clear bit denotes
 $-1$. Bits 0--15 encode the same 16-entry sign vector that the pinned TE
-implementation stores explicitly. The H32 implementation operates as two
-16-value thread halves, and each half reuses this low-16-bit motif before the
-cross-half shuffle. Thus H32 names the 32-value transform width, not a 32-bit
-random mask: the reported H32 transform repeats one signed-H16 diagonal and
-does not consume the literal's upper zero bits as positions 16--31. No signs
-are drawn during training. The construction remains
-orthogonal and preserves the unquantized Wgrad dot product because the
-identical transform is paired on $X$ and $dY$. The experiments do not compare
-this fixed vector with newly sampled signs and do not establish that the
-particular diagonal is optimal.
+implementation stores explicitly. The H32 implementation applies this same
+16-sign pattern separately to two 16-value halves, then combines the halves
+with the final 32-value Hadamard add/subtract stage. Thus H32 names the
+32-value transform width, not a 32-bit random mask: the reported H32 transform
+repeats one signed-H16 diagonal and does not interpret the literal's upper
+zero bits as 16 additional signs. No signs are drawn during training. The
+construction remains orthogonal and preserves the unquantized Wgrad dot
+product because the identical transform is paired on $X$ and $dY$. The
+experiments do not compare this fixed vector with newly sampled signs and do
+not establish that the particular diagonal is optimal.
 
 Compilation and first-step kernel generation are excluded from steady-state
 probe windows. Each measurement records device count, local batch, gradient
 accumulation, seed, loss implementation, source revision, and metric window.
-Each stochastic producer reserves one logical random-number interval, and the
-ranked seed/subsequence state is checkpointed across resumes.
+Each distributed worker checkpoints its stochastic-rounding seed and counter
+offset so that a resumed run does not reuse random-number draws.
 
 Table~\ref{tab:b300-snapshots} gives secondary production measurements. All
 three use a BF16 output projection and compiled regular CE. Their batch
-geometries and measurement windows differ, so they are not a one-factor
-comparison.
+geometries and measurement windows differ, so the table does not isolate one
+implementation change.
 
 \begin{table}[H]
   \centering

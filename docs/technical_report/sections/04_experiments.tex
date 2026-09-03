@@ -43,9 +43,10 @@ appendix records execution-specific details.
 Tables~\ref{tab:recipe-ledger} and~\ref{tab:recipe-state-ledger} state the
 numerical recipe for every reported route. ``Row SR'' means stochastic
 rounding only for the row-oriented gradient consumed by Dgrad. Activations,
-weights, scales, and the Wgrad-oriented gradient remain deterministic in those
-custom routes. A Wgrad Hadamard transform always acts on $X$ and $dY$ as a
-pair; it never transforms the stored weight.
+weights, scales, and the separate Wgrad-oriented gradient representation
+remain deterministic in every custom route labelled ``row SR.'' A Wgrad
+Hadamard transform always acts on $X$ and $dY$ as a pair; it never transforms
+the stored weight.
 
 \begin{table}[htbp]
   \centering
@@ -63,9 +64,9 @@ pair; it never transforms the stored weight.
     BF16 & blocks 1--32 & BF16 & BF16 & BF16 & BF16 master \\
     TE-native \nvfp{} in all blocks & blocks 1--32 & global NV & global NV & global NV + TE-managed H16 & TE 2D16 \\
     TE \nvfp{} with four final BF16 blocks & NV blocks 1--28; BF16 29--32 & NV 1--28; BF16 29--32 & NV 1--28; BF16 29--32 & NV+TE-managed H16 1--28; BF16 29--32 & TE 2D16 / BF16 \\
-    Custom global \nvfp{} & blocks 1--32 & global NV & global NV & global NV & custom native 2D16 \\
+    Custom global \nvfp{} & blocks 1--32 & global NV & global NV & global NV & custom 2D16 \\
     \mxfp{} + row-SR & blocks 1--32 & MX & MX & MX & custom 2D32 \\
-    \localcta{}-v4 & blocks 1--32 & localCTA & localCTA & localCTA & custom 2D16 \\
+    \localcta{} & blocks 1--32 & localCTA & localCTA & localCTA & custom 2D16 \\
     \localcta{}+fixed H16 & blocks 1--32 & localCTA & localCTA & localCTA + paired fixed-sign H16 & custom 2D16 \\
     27/5 depth hybrid & LC blocks 1--27; MX 28--32 & LC 1--27; MX 28--32 & LC 1--27; MX 28--32 & LC 1--27; MX 28--32 & LC 2D16; MX 2D32 \\
     \mxfp{}+row-SR+fixed H32 & blocks 1--32 & MX & MX & MX + paired fixed-sign H32 & custom 2D32 \\
@@ -83,14 +84,14 @@ pair; it never transforms the stored weight.
   \label{tab:recipe-state-ledger}
   \begin{tabularx}{\textwidth}{@{}lYYY@{}}
     \toprule
-    Route & Gradient rounding & Hadamard contract & BF16 body blocks / output head \\
+    Route & Gradient rounding & Wgrad preconditioning & BF16 body blocks / output head \\
     \midrule
     BF16 & n/a & none & all / BF16 \\
     TE-native \nvfp{} in all blocks & TE gradient SR & TE-managed H16 on Wgrad & none / BF16 \\
     TE \nvfp{} + four final BF16 blocks & TE gradient SR & TE-managed H16 on NV Wgrad & last four / BF16 \\
     Custom global \nvfp{} & row data SR & none & none / BF16 \\
     \mxfp{} + row-SR & row data SR & none & none / BF16 \\
-    \localcta{}-v4 & row data SR & none & none / BF16 \\
+    \localcta{} & row data SR & none & none / BF16 \\
     \localcta{}+fixed H16 & row data SR & paired fixed-sign H16 on Wgrad $X,dY$ & none / BF16 \\
     27/5 depth hybrid & row data SR in both & none & none / BF16 \\
     \mxfp{}+row-SR+fixed H32 & row data SR & paired fixed-sign H32 on Wgrad $X,dY$ & none / BF16 \\
@@ -99,11 +100,10 @@ pair; it never transforms the stored weight.
     \bottomrule
   \end{tabularx}
 \end{table}
-\FloatBarrier
 
-``TE-managed'' means that Transformer Engine controls the H16 transform. We do
-not assign that route the stronger fixed-sign contract used by the custom
-kernels.
+``TE-managed'' means that Transformer Engine controls the H16 transform. Its
+sign-state contract is distinct from the explicit fixed-sign contract used by
+the custom kernels.
 
 All custom training routes retain BF16 parameters and FP32 optimizer state. The final column
 in Table~\ref{tab:recipe-ledger} describes the transient FP4 representation
@@ -124,11 +124,12 @@ selected between adjacent E2M1 levels.
 Appendix~\ref{app:reproducibility} gives the checkpoint inclusion criteria and
 additional reproducibility details.
 
+\FloatBarrier
 \subsection{End-to-end performance measurements}
 
 The performance probes use the same accelerator type, sequence length, global
 batch, seed, BF16 output projection, compiled CE, warmup rule, metric window,
-and distributed telemetry. Each route uses its selected local batch,
+and per-GPU timing records. Each route uses its selected local batch,
 activation-checkpoint policy, and distributed schedule, so the panel compares
 complete end-to-end configurations rather than one isolated implementation
 change. Tables report cross-device aggregates. Local batch (LB) and gradient
@@ -181,13 +182,15 @@ Validation uses a fixed external stream constructed from an 82/18 DataComp-LM
 (DCLM) and OLMo-without-DCLM source mixture
 \cite{li2024datacomplm,olmo2025olmo2}. It contains 768
 sequences and 6,291,456 next-token targets. Documents are deduplicated, mixed,
-and shuffled before packing so a device rank cannot represent only one source
-or cursor range. Every checkpoint consumes the same tokenized sequences. We
+and shuffled before packing so one GPU worker cannot receive examples from
+only one source or contiguous region of source data. Every checkpoint consumes
+the same tokenized sequences. We
 call this an external validation stream rather than a held-out split because
 zero overlap with every historical training trajectory cannot be proven.
-Before route comparison, converted and native evaluation must agree at the
-full 8,192-token context, and a late BF16 checkpoint must improve over an early
-one by more than five sequence-level standard errors.
+Before route comparison, the converted-checkpoint evaluator and native
+TorchTitan model must agree at the full 8,192-token context, and a late BF16
+checkpoint must improve over an early one by more than five sequence-level
+standard errors.
 
 Every downstream comparison uses the literal step-38,000 checkpoint and BF16
 inference. Converted models must match TorchTitan's RoPE and RMSNorm semantics

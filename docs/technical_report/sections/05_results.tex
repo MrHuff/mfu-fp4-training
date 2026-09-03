@@ -9,13 +9,16 @@ tokens/s/GPU, compared with
 Table~\ref{tab:gb200-throughput} reports the complete same-accelerator panel.
 Every row uses sequence length 8,192, global batch 512, a BF16 output
 projection, compiled regular CE, and a cross-device median over steps 40--100.
-BF16 and TE use LB2/GA8; the custom paths use LB4/GA4.
+BF16 and TE use local batch size 2 with eight gradient-accumulation steps
+(LB2/GA8); the custom paths use local batch size 4 with four
+gradient-accumulation steps (LB4/GA4).
 
 \begin{table}[H]
   \centering
   \caption{GB200 throughput with compiled regular CE. Values are cross-device
   medians over steps 40--100 for each route's selected batch geometry. BF16
-  uses selective-8 activation checkpointing; all other rows use selective-32.
+  uses the selective-8 setting, which checkpoints every eighth transformer
+  block; all other rows use selective-32, which checkpoints every 32nd block.
   BF16 MFU uses NVIDIA's 2,500-TFLOP/s/GPU maximum dense BF16 throughput:
   180 PFLOP/s dense for 72 GPUs \cite{nvidia2025blackwell}.}
   \label{tab:gb200-throughput}
@@ -29,7 +32,7 @@ BF16 and TE use LB2/GA8; the custom paths use LB4/GA4.
     TE \nvfp{} + four final BF16 blocks & 2/8 & 27,077.50 & 62.73\% & 126.03 GiB \\
     Custom global \nvfp{} & 4/4 & 32,490.50 & 75.27\% & 155.63 GiB \\
     \mxfp{} + row-SR & 4/4 & 37,876.75 & 87.74\% & 154.43 GiB \\
-    \localcta{}-v4 & 4/4 & 33,243.76 & 77.01\% & 115.52 GiB \\
+    \localcta{} & 4/4 & 33,243.76 & 77.01\% & 115.52 GiB \\
     \localcta{} + fixed H16 & 4/4 & 31,882.61 & 73.86\% & 114.89 GiB \\
     27/5 depth hybrid & 4/4 & 33,120.50 & 76.73\% & 126.21 GiB \\
     Operand hybrid + plain H16 & 4/4 & 34,782.50 & 80.58\% & 154.92 GiB \\
@@ -40,7 +43,8 @@ BF16 and TE use LB2/GA8; the custom paths use LB4/GA4.
   \end{adjustbox}
 \end{table}
 
-Under the same world-32 LB4/GA4 geometry, the
+Under the same 32-GPU geometry with local batch size 4 and four gradient
+accumulation steps (LB4/GA4), the
 \mxfp{}+row-SR+fixed-H32 route reaches 98.34\% of the row-SR-only \mxfp{} throughput.
 Additional measurement details appear in
 Appendix~\ref{app:implementation}.
@@ -68,13 +72,16 @@ display-only fit described below.
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss.png}
   \caption{Llama-8B training loss and relative difference from the BF16
   reference. Continuous histories use EMA-31, and diamonds mark the final
-  plotted endpoint. Custom-global-NVFP4 telemetry is dense through step 19,000. After that
-  point, the upper panel marks 74 exact recovered observations, including
-  the terminal diamond; the lower panel marks the 18 observations with an
-  exact BF16 step match. Dashed lines show a display-only robust locally
-  weighted scatterplot smoothing (LOWESS) fit evaluated on the common BF16
-  display grid. The 27/5 depth hybrid joins three logged training segments at
-  exact checkpoint boundaries, with no interpolated values.}
+  plotted endpoint. Custom-global-\nvfp{} has regular observations through
+  step 19,000, but its dense later history was not retained. The upper panel
+  therefore shows the 74 exact later observations recovered from training
+  logs, including the terminal diamond; the lower panel shows the 18
+  observations recorded at the same step as BF16. The dashed
+  custom-global-\nvfp{} line is a smoothed visual guide through those sparse
+  observations, not additional measurements. Appendix~\ref{app:reproducibility}
+  records the surviving data sources. The 27/5 depth hybrid
+  joins three logged training segments at exact checkpoint boundaries, with
+  no interpolated values.}
   \label{fig:llama8b-loss}
 \end{figure}
 
@@ -87,9 +94,8 @@ the late loss separation at the same scale without extrapolating any route.
   \caption{Training loss from 120B to 160B tokens. Diamonds mark exact logged
   endpoints. The 27/5 curve uses its complete logged history without
   interpolation. As in Figure~\ref{fig:llama8b-loss}, the late
-  custom-global-NVFP4 markers are exact observations and the dashed curve is
-  their display-only dense-grid
-  LOWESS fit.}
+  custom-global-\nvfp{} markers are exact observations and the dashed curve is
+  a smoothed visual guide, not additional measurements.}
   \label{fig:llama8b-loss-zoom}
 \end{figure}
 
@@ -126,9 +132,11 @@ by TE-native at 1.34\%. \mxfp{} with row-SR and fixed H32 is the closest custom
 route at 2.11\%; it is 0.76\% above TE-native. The fixed-H32 operand hybrid
 ends 1.85\% above the pure \mxfp{}-H32 route and 4.00\% above BF16.
 
-Using tensors from the step-28,000 \mxfp{}+row-SR+fixed-H32 checkpoint, we replayed
-Dgrad with \localcta{} and \mxfp{}. Against a BF16 replay, \localcta{} had lower Dgrad error energy
-in all 288 layer--component comparisons; the geometric-mean
+To compare error in the backward input-gradient calculation (Dgrad), we used
+tensors captured at step 28,000 from the \mxfp{}+row-SR+fixed-H32 run. We
+recomputed Dgrad with \localcta{} and with \mxfp{}, using BF16 as the
+reference. \localcta{} had lower Dgrad error energy in all 288
+layer--component comparisons; the geometric-mean
 $E_{\mathrm{MX}}/E_{\mathrm{localCTA}}$ ratio was 1.292. The completed
 plain-H16 operand hybrid nevertheless ends 1.99\% above \mxfp{}+row-SR+fixed H32 in
 training loss. Appendix~\ref{app:dgrad-diagnostic} gives the capture and
@@ -137,7 +145,8 @@ aggregation contract.
 \subsection{Validation loss}
 
 Figure~\ref{fig:llama8b-validation} evaluates every available exact checkpoint
-on one fixed external stream. At the common step-38,000 cut, \mxfp{} with fixed H32 has
+on one fixed external stream. We report mean negative log-likelihood (NLL),
+for which lower values are better. At the common step-38,000 cut, \mxfp{} with fixed H32 has
 the lowest observed validation NLL, 2.422804. BF16 records 2.430206, the TE
 route with four final BF16 blocks 2.437475, and TE-native 2.440488. The
 fixed-H32 operand hybrid records 2.463842, compared with 2.460331 for
@@ -145,9 +154,9 @@ fixed-H32 operand hybrid records 2.463842, compared with 2.460331 for
 relative NLL differences $100(L_{\mathrm{BF16}}-L_{\mathrm{route}})/L_{\mathrm{BF16}}$
 for \mxfp{}-H32, four-final-BF16-block, and operand-H32 are
 $+0.305\%$, $-0.299\%$, and $-1.384\%$, respectively; positive values
-indicate lower NLL than BF16. These are observed
-single-trajectory comparisons, not a one-factor isolation of H32 or
-repeated-seed estimates.
+indicate lower NLL than BF16. These comparisons cover complete recipes from
+one training trajectory each; they do not isolate the effect of H32 or average
+over repeated seeds.
 
 The 27/5 depth hybrid is evaluated at the five common cuts: steps 2,000,
 10,000, 18,000, 29,000, and 38,000. At step 38,000 its validation NLL is

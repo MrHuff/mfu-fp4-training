@@ -18,7 +18,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "0ec05f41702253fe9e8e833bf41b2784781b3809882cf1303235475f8b786c86"
+      "sha256": "69276f60a9a5ceef8ac1337c712da7a70c7c28a78c269d2f7b90ae363859ab09"
     },
     {
       "path": "docs/technical_report/figures/fp4_fusion_dataflow.png",
@@ -26,11 +26,11 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_linear_operand_hybrid.png",
-      "sha256": "92b2b064f282242120a3c4719971f6063655784180dbb1c3ea9fcd39024aa3f6"
+      "sha256": "8a67588760f6ec9bce9345862da9800410d2de18e4770a9f23efd2332b2cd7f7"
     },
     {
       "path": "docs/technical_report/figures/fp4_localcta_scaling.png",
-      "sha256": "14afdb3e348e3796e1b496c708e8c929737e55966bb9b4a7421bd070a6c7ae1c"
+      "sha256": "649e4429cfa5ee056f780acf852ecdf55acbe047b6bd9b4712a4afbf79abde3c"
     },
     {
       "path": "docs/technical_report/figures/fp4_mxfp4_scale_rounding.png",
@@ -80,7 +80,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "0ec05f41702253fe9e8e833bf41b2784781b3809882cf1303235475f8b786c86",
+      "sha256": "69276f60a9a5ceef8ac1337c712da7a70c7c28a78c269d2f7b90ae363859ab09",
       "source_component": "."
     },
     {
@@ -90,12 +90,12 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_linear_operand_hybrid.png",
-      "sha256": "92b2b064f282242120a3c4719971f6063655784180dbb1c3ea9fcd39024aa3f6",
+      "sha256": "8a67588760f6ec9bce9345862da9800410d2de18e4770a9f23efd2332b2cd7f7",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/fp4_localcta_scaling.png",
-      "sha256": "14afdb3e348e3796e1b496c708e8c929737e55966bb9b4a7421bd070a6c7ae1c",
+      "sha256": "649e4429cfa5ee056f780acf852ecdf55acbe047b6bd9b4712a4afbf79abde3c",
       "source_component": "."
     },
     {
@@ -135,7 +135,7 @@
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
       "file_count": 588,
-      "file_ledger_sha256": "7c04e5e12c49481f8a66921fa38776eeed13a15dd5538c2c70296e31f97d026c",
+      "file_ledger_sha256": "3c64c19d7d90e84ef062952ca83f64787f8312da23db4be13e450a4125aa7942",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [

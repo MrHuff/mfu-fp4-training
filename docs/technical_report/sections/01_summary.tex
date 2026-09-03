@@ -8,8 +8,10 @@ memory (HBM), this surrounding work can erase the GEMM speedup
 \cite{nvidia2025nvfp4}.
 
 We address this gap with \emph{format-aware fusion}: each producer completes
-its format-specific scale domain while emitting the layouts and saved state
-required by its consumers. \mxfp{} completes a local 32-value scale, global
+the scale shared by its output values while emitting the packed layouts and
+saved state needed by the following matrix multiplications. We use
+\emph{route} to mean a complete numerical recipe and execution path, not only
+an FP4 datatype. \mxfp{} completes a local 32-value scale, global
 \nvfp{} waits for a tensor-wide maximum, and cooperative-thread-array-local
 (CTA-local) \nvfp{} completes two outer scales inside the tile that owns the
 matrix multiplication. The profitable fusion boundary therefore differs by
@@ -20,37 +22,43 @@ We evaluate the resulting paths in Llama-3-family 8B pretraining at sequence len
 BF16 output projection and compiled cross entropy (CE), while long
 trajectories cover up to 160B tokens. The fastest custom route reaches 37.9K
 tokens/s/GPU. The \mxfp{} route with row-gradient stochastic rounding (SR)
-and fixed-sign H32 weight-gradient (Wgrad) preconditioning reaches 37.2K
+and fixed-sign 32-value Hadamard (H32) weight-gradient (Wgrad)
+preconditioning reaches 37.2K
 tokens/s/GPU and ends 2.11\% above the raw BF16 endpoint. The TE-native and
 four-final-BF16-block trajectories end 1.34\% and 0.87\% above raw BF16,
 respectively, at measured throughputs of 27.6K and 27.1K tokens/s/GPU.
 
 Table~\ref{tab:prior-work-boundary} situates the implementation relative to
-published FP4 practice. We contribute:
+established FP4 practice. We contribute:
 
 \begin{itemize}
   \item \emph{Numerical parameterization.} We specify the FP4 contract per
-        operand: encode-centric \mxfp{} scaling for activations and gradients,
-        an adaptive finer-grid rule for 2D32 weights, tile-owned two-sided
-        outer scaling for \localcta{}, row-only SR for Dgrad, and paired
-        fixed-sign H16/H32 preconditioning for Wgrad.
+        operand: upward-rounded \mxfp{} scales for activations and gradients;
+        an adaptive finer scale for $32\times32$ weight tiles; separate FP32
+        row- and column-tile scale factors for \localcta{}; stochastic
+        rounding only for the data-gradient multiplication; and paired
+        fixed-sign 16- or 32-value Hadamard preconditioning only for the
+        weight-gradient multiplication.
 
   \item \emph{Format-aware fusion and native implementation.} We implement
         custom \mxfp{}, custom global \nvfp{}, and \localcta{} producers that
-        complete the appropriate scale domain and emit the layouts and saved
+        finish the scale calculation over the required group of values and emit the layouts and saved
         state required by forward and backward. The MXFP4 and CTA-local weight
-        producers quantize once and form both consumer layouts in one boundary;
-        custom global NVFP4 binds the 2D quantize--transpose output into the
-        native route. Backward producers fuse optional Hadamard preconditioning
+        producers quantize once and emit both packed weight layouts in the same
+        fused operation. Custom global NVFP4 likewise integrates its shared
+        $16\times16$ weight encoding and both packed layouts directly into the
+        fused path. Backward stages fuse optional Hadamard preconditioning
         with column quantization. The same framework supports depth- and
         operand-wise hybrids.
 
   \item \emph{End-to-end empirical evaluation.} We implement and evaluate the
         custom pure and hybrid routes alongside BF16 and TE comparators. The
         hybrid designs include depth-wise format assignment and an operand-wise
-        assignment motivated by same-state Dgrad error analysis. The evidence
+        assignment motivated by a data-gradient error analysis using identical
+        saved tensors. The evidence
         comprises matched throughput probes, trajectories through 160B
-        training tokens, checkpoint-matched fixed-stream validation, and
+        training tokens, checkpoint-matched validation loss on a fixed
+        external data stream, and
         downstream evaluation of the complete recipes.
 
   \item \emph{Reproducible release.} We release the training and

@@ -209,7 +209,7 @@ def make_format_execution_routes() -> None:
     fig, axes = plt.subplots(3, 1, figsize=(10.8, 7.0))
     rows = [
         (
-            "MXFP4-v4",
+            "MXFP4",
             [
                 (0.03, 0.16, "BF16 producer\nRMSNorm / SwiGLU", MID),
                 (0.29, 0.28, "fused local amax$_{32}$\nE8M0 + E2M1 pack\nrow and column views", BLUE),
@@ -222,19 +222,19 @@ def make_format_execution_routes() -> None:
             [
                 (0.03, 0.16, "BF16 producer\nstarts amax early", MID),
                 (0.29, 0.18, "tensor amax\ncompletion", RED),
-                (0.54, 0.24, "E4M3 scale$_{16}$\n+ E2M1 pack\n+ scale swizzle", PINK),
+                (0.54, 0.24, "E4M3 scale$_{16}$\n+ E2M1 pack\n+ scale layout", PINK),
                 (0.85, 0.12, "NVFP4\nGEMM", GREEN),
             ],
             "The finer scale grid adds a tensor-wide completion dependency; overlap matters as much as packing speed.",
         ),
         (
-            "CTA-local NVFP4-v4",
+            "CTA-local NVFP4",
             [
                 (0.03, 0.18, "BF16 tile\nproducer", MID),
-                (0.29, 0.30, "fused tile outer scale\n+ E4M3 scale$_{16}$\n+ row/column payloads", TEAL),
+                (0.29, 0.30, "fused tile outer scale\n+ E4M3 scale$_{16}$\n+ row/column views", TEAL),
                 (0.69, 0.20, "NVFP4 GEMM\nfull K reduction\n$\\times\\,\\alpha_i\\beta_j$ once", GREEN),
             ],
-            "No global amax barrier: two K-invariant FP32 outer scales travel with the tile to the GEMM epilogue.",
+            "No tensor-wide amax barrier: two FP32 outer scales stay constant along the inner dimension and are applied at GEMM output.",
         ),
     ]
     for ax, (title, boxes, note) in zip(axes, rows):
@@ -289,16 +289,16 @@ def make_linear_operand_map() -> None:
 
     bottom.set_title("Operand hybrid: assign a format to each contraction")
     hybrid = [
-        (0.02, "Fprop", "MXFP4-v4\n2D weight; untransformed", BLUE),
-        (0.345, "Dgrad", "CTA-local NVFP4-v4\nrow-$dY$ data SR", TEAL),
-        (0.67, "Wgrad", "MXFP4-v4\npaired plain H16", PURPLE),
+        (0.02, "Fprop", "MXFP4\n2D weight; untransformed", BLUE),
+        (0.345, "Dgrad", "CTA-local NVFP4\nrow-$dY$ data SR", TEAL),
+        (0.67, "Wgrad", "MXFP4\npaired plain H16", PURPLE),
     ]
     for x, title, body, color in hybrid:
         _box(bottom, x, 0.46, 0.29, 0.32, title + "\n" + body, color)
     bottom.text(
         0.50,
         0.24,
-        "A fused backward producer reads each BF16 gradient tile once and emits the MX column-H16 and CTA-local row-SR carriers.",
+        "A fused backward stage reads each BF16 gradient tile once and emits an MXFP4 column view for Wgrad and a CTA-local row view for Dgrad.",
         ha="center",
         fontsize=9.3,
         color=DARK,
@@ -306,7 +306,7 @@ def make_linear_operand_map() -> None:
     bottom.text(
         0.50,
         0.09,
-        "This mixes operands inside every linear layer and also revises the pure run's fixed-sign H32 Wgrad transform to plain H16.",
+        "The plain-H16 version changes only the Wgrad preconditioner relative to the fixed-H32 version.",
         ha="center",
         fontsize=9.3,
         color=MID,
@@ -672,7 +672,7 @@ def make_localcta_scaling() -> None:
         0.38,
         0.30,
         0.15,
-        "FP4 payloads\n+ scale swizzle",
+        "FP4 values\n+ scale layout",
         TEAL,
     )
     _arrow(left, 0.31, 0.63, 0.31, 0.53)
