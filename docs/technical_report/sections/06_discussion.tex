@@ -19,8 +19,8 @@ training-loss gap at one step is not enough.
 The measured TE routes track BF16 closely: TE-native and the
 four-final-BF16-block route end 1.34\% and 0.87\% above the raw BF16 loss.
 Their common probes reach 27.6K and 27.1K tokens/s/GPU. A separate
-same-accelerator probe of the fused global-v5 route reaches 32.5K
-tokens/s/GPU; the r5 long trajectory ends 2.69\% above BF16. Both preserve
+same-accelerator probe of the custom global \nvfp{} route reaches 32.5K
+tokens/s/GPU; its long trajectory ends 2.69\% above BF16. Both preserve
 the tensor-global \nvfp{} scale hierarchy. The panel does not isolate the cost
 of scaling from implementation and batch geometry, but it exposes the systems
 constraint: a tensor-global amax creates a completion dependency that the
@@ -64,7 +64,7 @@ describe complete recipes rather than one-factor causal effects. The
 same-state diagnostic covers one checkpoint and three sequence-2,048 batches.
 It replays the linear operators without attention mixing, residual paths, or
 RoPE, so it does not establish a universal layer-sensitivity rule.
-Pure-v5 telemetry is sparse after step 19,000, and its dashed late curve is a
+Custom-global-NVFP4 telemetry is sparse after step 19,000, and its dashed late curve is a
 display-only dense-grid fit through exact observations. The fixed validation
 stream is not a proven zero-overlap split from every historical training
 trajectory. These limits govern the claims throughout the report.

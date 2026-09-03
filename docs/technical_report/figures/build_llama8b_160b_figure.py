@@ -81,7 +81,7 @@ DISPLAY = {
     "mxfp4_rht": "MXFP4 + row-SR + fixed H32",
     "localcta_repaired": "CTA-local NVFP4",
     "localcta_rht": "CTA-local NVFP4 + fixed H16",
-    "pure_v5": "Global NVFP4 v5",
+    "pure_v5": "Custom global NVFP4",
     "te_f0l4": "TE NVFP4 + 4 BF16 blocks",
     "hybrid_localcta_mxfp4": "27/5 depth hybrid",
     "operand_hybrid_plain_h16": "Operand hybrid + plain H16",

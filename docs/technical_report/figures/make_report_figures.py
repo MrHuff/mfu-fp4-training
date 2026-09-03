@@ -218,7 +218,7 @@ def make_format_execution_routes() -> None:
             "Power-of-two scales are local to 32 values: quantization can finish as tiles are produced.",
         ),
         (
-            "Global NVFP4 v5",
+            "Custom global NVFP4",
             [
                 (0.03, 0.16, "BF16 producer\nstarts amax early", MID),
                 (0.29, 0.18, "tensor amax\ncompletion", RED),
@@ -352,7 +352,7 @@ def make_2d_weight_contract() -> None:
     right.text(
         0.50,
         0.14,
-        "TE/global v5 and CTA-local use $b=16$; MXFP4 uses $b=32$.\n"
+        "TE/custom-global NVFP4 and CTA-local use $b=16$; MXFP4 uses $b=32$.\n"
         "Custom MXFP4 and CTA-local producers fuse dual-layout emission.",
         ha="center",
         fontsize=8.5,
@@ -508,7 +508,7 @@ def make_superseded_downstream_deltas_for_forensics() -> None:
     ]
     route_specs = [
         ("te_native", "TE-native NVFP4", BLUE),
-        ("pure_v5", "Global NVFP4 v5", PINK),
+        ("pure_v5", "Custom global NVFP4", PINK),
         ("mxfp4", "MXFP4 + row-SR", ORANGE),
         ("localcta", "CTA-local NVFP4", TEAL),
         ("localcta_mxfp4_hybrid", "27/5 depth hybrid", MID),

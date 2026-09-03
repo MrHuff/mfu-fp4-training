@@ -30,7 +30,7 @@ ROUTE_LABELS = {
     "bf16": "BF16",
     "te_native": "TE-native NVFP4",
     "te_fol4": "TE NVFP4 + 4 BF16 blocks",
-    "pure_v5": "Global NVFP4 v5",
+    "pure_v5": "Custom global NVFP4",
     "mxfp4": "MXFP4 + row-SR",
     "mxfp4_h32": "MXFP4 + row-SR + fixed H32",
     "localcta": "CTA-local NVFP4",

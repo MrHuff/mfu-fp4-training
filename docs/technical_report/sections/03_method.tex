@@ -25,8 +25,8 @@ projection, QKV into attention, the gated feed-forward network (FFN), and the
 residual update into the next RMSNorm. Each has a corresponding backward
 boundary.
 
-Fusion itself is established systems practice. The contribution here is the
-FP4 boundary contract: a producer completes the format's scale domain, emits
+Our FP4 boundary contract makes the fusion boundary explicit: a producer
+completes the format's scale domain, emits
 both physical orientations needed by Fprop, Dgrad, and Wgrad, and retains the
 BF16 and random state required by autograd. Those obligations differ across
 MXFP4, global NVFP4, and CTA-local NVFP4, so one generic quantize--GEMM fusion
@@ -98,7 +98,7 @@ SR; neither uses Hadamard preconditioning.
 The \emph{operand-wise} hybrid instead chooses the format per contraction. A
 same-state operator analysis found lower Dgrad error for \localcta{} than for
 \mxfp{} in every measured layer and component. This motivates replacing
-\mxfp{} Dgrad with \localcta{} while retaining the established \mxfp{} Fprop
+\mxfp{} Dgrad with \localcta{} while retaining the \mxfp{} Fprop
 and Wgrad path. The diagnostic and its scope are
 reported in Section~\ref{sec:results} and
 Appendix~\ref{app:dgrad-diagnostic}.

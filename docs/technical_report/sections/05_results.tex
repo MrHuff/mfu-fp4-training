@@ -27,7 +27,7 @@ BF16 and TE use LB2/GA8; the custom paths use LB4/GA4.
     BF16 & 2/8 & 18,812.00 & 43.58\% & 101.19 GiB \\
     TE-native \nvfp{} in all blocks & 2/8 & 27,622.00 & 63.99\% & 125.80 GiB \\
     TE \nvfp{} + four final BF16 blocks & 2/8 & 27,077.50 & 62.73\% & 126.03 GiB \\
-    Global \nvfp{} v5 & 4/4 & 32,490.50 & 75.27\% & 155.63 GiB \\
+    Custom global \nvfp{} & 4/4 & 32,490.50 & 75.27\% & 155.63 GiB \\
     \mxfp{} + row-SR & 4/4 & 37,876.75 & 87.74\% & 154.43 GiB \\
     \localcta{}-v4 & 4/4 & 33,243.76 & 77.01\% & 115.52 GiB \\
     \localcta{} + fixed H16 & 4/4 & 31,882.61 & 73.86\% & 114.89 GiB \\
@@ -60,7 +60,7 @@ relative-difference convention used by NVIDIA
 \end{equation}
 Zero is the BF16 reference and a negative value means the low-precision route
 has higher loss. Reported comparisons use exact shared logged steps; no
-reported loss value is interpolated. The dashed late-v5 line is the
+reported loss value is interpolated. The dashed custom-global-NVFP4 line is the
 display-only fit described below.
 
 \begin{figure}[tbp]
@@ -68,8 +68,8 @@ display-only fit described below.
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss.png}
   \caption{Llama-8B training loss and relative difference from the BF16
   reference. Continuous histories use EMA-31, and diamonds mark the final
-  plotted endpoint. Pure-v5 telemetry is dense through step 19,000. After that
-  point, the upper panel marks 74 exact recovered r5 observations, including
+  plotted endpoint. Custom-global-NVFP4 telemetry is dense through step 19,000. After that
+  point, the upper panel marks 74 exact recovered observations, including
   the terminal diamond; the lower panel marks the 18 observations with an
   exact BF16 step match. Dashed lines show a display-only robust locally
   weighted scatterplot smoothing (LOWESS) fit evaluated on the common BF16
@@ -86,8 +86,9 @@ the late loss separation at the same scale without extrapolating any route.
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss_zoom.png}
   \caption{Training loss from 120B to 160B tokens. Diamonds mark exact logged
   endpoints. The 27/5 curve uses its complete logged history without
-  interpolation. As in Figure~\ref{fig:llama8b-loss}, the late-v5 markers are
-  exact r5 observations and the dashed curve is their display-only dense-grid
+  interpolation. As in Figure~\ref{fig:llama8b-loss}, the late
+  custom-global-NVFP4 markers are exact observations and the dashed curve is
+  their display-only dense-grid
   LOWESS fit.}
   \label{fig:llama8b-loss-zoom}
 \end{figure}
@@ -109,7 +110,7 @@ complete the scheduled training horizon.
     TE-native \nvfp{} & 2.396353 & 1.34\% \\
     \mxfp{} + row-SR + fixed H32 & 2.414578 & 2.11\% \\
     \localcta{} & 2.417708 & 2.24\% \\
-    Global \nvfp{} v5 & 2.428200 & 2.69\% \\
+    Custom global \nvfp{} & 2.428200 & 2.69\% \\
     \localcta{} + fixed H16 & 2.432642 & 2.88\% \\
     Operand hybrid + fixed H32 & 2.459305 & 4.00\% \\
     Operand hybrid + plain H16 & 2.462673 & 4.15\% \\
@@ -140,7 +141,7 @@ on one fixed external stream. At the common step-38,000 cut, \mxfp{} with fixed 
 the lowest observed validation NLL, 2.422804. BF16 records 2.430206, the TE
 route with four final BF16 blocks 2.437475, and TE-native 2.440488. The
 fixed-H32 operand hybrid records 2.463842, compared with 2.460331 for
-\localcta{} and 2.462074 for global \nvfp{} v5. Relative to BF16, the
+\localcta{} and 2.462074 for custom global \nvfp{}. Relative to BF16, the
 relative NLL differences $100(L_{\mathrm{BF16}}-L_{\mathrm{route}})/L_{\mathrm{BF16}}$
 for \mxfp{}-H32, four-final-BF16-block, and operand-H32 are
 $+0.305\%$, $-0.299\%$, and $-1.384\%$, respectively; positive values

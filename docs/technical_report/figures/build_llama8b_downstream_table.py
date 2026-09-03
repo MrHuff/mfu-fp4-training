@@ -26,7 +26,7 @@ ROUTE_LABELS = {
     "bf16": "BF16",
     "te_native": r"TE-native \nvfp{}",
     "te_fol4": r"TE \nvfp{}, four final BF16 blocks",
-    "pure_v5": r"Global \nvfp{} v5",
+    "pure_v5": r"Custom global \nvfp{}",
     "mxfp4": r"\mxfp{} + row-SR",
     "mxfp4_h32": r"\mxfp{} + row-SR + fixed H32",
     "localcta": r"\localcta{}",

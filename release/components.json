@@ -6,7 +6,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_2d_weight_contract.png",
-      "sha256": "bb509ed3081f1c033511cecafb2cc021da7531881f60b9896858bb7557e7a095"
+      "sha256": "5426d752071690e3a8e01de21624a3133eb97977af1fb9ee809a0f05eea21481"
     },
     {
       "path": "docs/technical_report/figures/fp4_cce_nvfp4_pcache_gate.png",
@@ -14,11 +14,11 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_downstream_delta_bf16.png",
-      "sha256": "3fc72ab720f1ed6c4e68c398168a1b53d44766e7c667be37bbc9a75c0b6319a3"
+      "sha256": "9ab00dddd7261a0f1c9cc73a6cc36cfa1b09c9d9a12950128afd745fbcee7f96"
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "2c609d072cdc06a6312d06bff13e625f2b672fb0ce336cc50d0741b12e11bcdf"
+      "sha256": "0ec05f41702253fe9e8e833bf41b2784781b3809882cf1303235475f8b786c86"
     },
     {
       "path": "docs/technical_report/figures/fp4_fusion_dataflow.png",
@@ -46,15 +46,15 @@
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss.png",
-      "sha256": "16dc8b0c9af1eb70faacb0b4b7826de9d901aa53330e3dc5332e3177ebf3a9c1"
+      "sha256": "28630eb5126f831f7e49e5eec90b09c2d09923fd29c6834c1a18cf2b27a0ee6b"
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png",
-      "sha256": "ccf71414f9d9c40362c24714818c4ee8b2e8648b38107bd9f0dbeb38c2e1cc6f"
+      "sha256": "9a3aebab3b27662401ca4bd136c1b807bdea459ceae96e678f70395392bf4a4c"
     },
     {
       "path": "docs/technical_report/figures/llama8b_validation_nll.png",
-      "sha256": "3ff6c791113969c4d8b38ac4d364f6ef679eadc89fe5cb1e999f835a07152c5b"
+      "sha256": "1b54cb31e2d70bc64a3d27de613bedd5b3a558c2ce042cf7e46a10aa60c38090"
     }
   ],
   "binary_assets": [
@@ -65,7 +65,7 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_2d_weight_contract.png",
-      "sha256": "bb509ed3081f1c033511cecafb2cc021da7531881f60b9896858bb7557e7a095",
+      "sha256": "5426d752071690e3a8e01de21624a3133eb97977af1fb9ee809a0f05eea21481",
       "source_component": "."
     },
     {
@@ -75,12 +75,12 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_downstream_delta_bf16.png",
-      "sha256": "3fc72ab720f1ed6c4e68c398168a1b53d44766e7c667be37bbc9a75c0b6319a3",
+      "sha256": "9ab00dddd7261a0f1c9cc73a6cc36cfa1b09c9d9a12950128afd745fbcee7f96",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "2c609d072cdc06a6312d06bff13e625f2b672fb0ce336cc50d0741b12e11bcdf",
+      "sha256": "0ec05f41702253fe9e8e833bf41b2784781b3809882cf1303235475f8b786c86",
       "source_component": "."
     },
     {
@@ -115,17 +115,17 @@
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss.png",
-      "sha256": "16dc8b0c9af1eb70faacb0b4b7826de9d901aa53330e3dc5332e3177ebf3a9c1",
+      "sha256": "28630eb5126f831f7e49e5eec90b09c2d09923fd29c6834c1a18cf2b27a0ee6b",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png",
-      "sha256": "ccf71414f9d9c40362c24714818c4ee8b2e8648b38107bd9f0dbeb38c2e1cc6f",
+      "sha256": "9a3aebab3b27662401ca4bd136c1b807bdea459ceae96e678f70395392bf4a4c",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/llama8b_validation_nll.png",
-      "sha256": "3ff6c791113969c4d8b38ac4d364f6ef679eadc89fe5cb1e999f835a07152c5b",
+      "sha256": "1b54cb31e2d70bc64a3d27de613bedd5b3a558c2ce042cf7e46a10aa60c38090",
       "source_component": "."
     }
   ],
@@ -135,7 +135,7 @@
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
       "file_count": 588,
-      "file_ledger_sha256": "8b8c6433b2ca1ddd5f4892b352de45d1edecf699a17e7ff8640af73efb747819",
+      "file_ledger_sha256": "7c04e5e12c49481f8a66921fa38776eeed13a15dd5538c2c70296e31f97d026c",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [

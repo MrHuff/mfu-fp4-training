@@ -4,7 +4,7 @@ but pretraining also computes scales, packs operands, constructs distinct
 forward and backward layouts, and preserves autograd state. This surrounding
 work can erase the matrix-multiply speedup. We present \emph{format-aware
 fusion}, which designs each quantized producer around the scale domain and
-operand views required by its consumers. The resulting native \mxfp{}, global
+operand views required by its consumers. The resulting native \mxfp{}, custom global
 \nvfp{}, and cooperative-thread-array-local (CTA-local) \nvfp{} paths fuse or
 overlap normalization, activation, quantization, layout production, and
 selected backward work. The recipes make scale selection, two-dimensional

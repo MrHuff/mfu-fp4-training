@@ -22,7 +22,7 @@ publication data.
 The long-run curves combine only explicitly identified execution segments.
 The \localcta{}+fixed-H16 and operand-hybrid trajectories each cross a
 documented full-state resume boundary. Their manifests identify the source and
-continuation ranges; no overlapping step is counted twice. Pure-v5 telemetry
+continuation ranges; no overlapping step is counted twice. Custom-global-NVFP4 telemetry
 is dense through step 19,000. Seventy-four exact r5 observations survive after
 that point; the largest telemetry gap spans steps 24,700--33,010. The dashed
 late line is a visual LOWESS fit through those observations, evaluated on the
@@ -85,7 +85,7 @@ a field was not recovered, the ledger records it as unknown rather than
 guessing the nearest commit. Complete identifiers and content digests are in
 the publication data ledger rather than the narrative.
 
-The global-v5 path uses one orientation-consistent 2D16 weight
+The custom-global-NVFP4 path uses one orientation-consistent 2D16 weight
 encoding. The completed \mxfp{}+row-SR+fixed-H32 run uses the historical native
 \mxfp{} body plus a content-verified Wgrad preconditioning overlay. The completed
 \localcta{}+fixed-H16 trajectory uses a fresh segment followed by an exact
@@ -119,7 +119,7 @@ $E_{\mathrm{MX}}/E_{\mathrm{localCTA}}$ is 1.292.
 
 \subsection{Excluded experiments}
 
-The v5/\mxfp{} depth hybrid remains outside the common endpoint panels because
+The custom-global-NVFP4/\mxfp{} depth hybrid remains outside the common endpoint panels because
 it diverged and retained only 16 of 32 terminal shards. The TE route with four
 final BF16 blocks and the fixed-H32 operand hybrid both completed 160B-token
 trajectories with resumable final checkpoints and are included in the endpoint
