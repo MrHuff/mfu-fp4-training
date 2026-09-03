@@ -1,18 +1,18 @@
 \begin{abstract}
 Four-bit floating-point (FP4) Tensor Cores accelerate matrix multiplication,
-but a language-model training step must also compute scales, pack operands,
-construct the layouts used by forward and backward, and preserve autograd
-state. This surrounding work can erase the matrix-multiply speedup. We present
-\emph{format-aware fusion}, which designs each quantized producer around the
-scale domain and operand views required by its consumers. The resulting native
-\mxfp{}, global \nvfp{}, and cooperative-thread-array-local (CTA-local)
-\nvfp{} paths fuse or overlap normalization, activation, quantization, layout
-production, and selected backward work. They combine orientation-consistent
-two-dimensional weights with contraction-specific rounding and
+but pretraining also computes scales, packs operands, constructs distinct
+forward and backward layouts, and preserves autograd state. This surrounding
+work can erase the matrix-multiply speedup. We present \emph{format-aware
+fusion}, which designs each quantized producer around the scale domain and
+operand views required by its consumers. The resulting native \mxfp{}, global
+\nvfp{}, and cooperative-thread-array-local (CTA-local) \nvfp{} paths fuse or
+overlap normalization, activation, quantization, layout production, and
+selected backward work. The recipes combine orientation-consistent
+two-dimensional weights with contraction-specific rounding and Hadamard
 preconditioning, while retaining a bfloat16 (BF16) output projection and
 compiled cross entropy.
 
-In same-accelerator Llama-8B probes, BF16 and NVIDIA Transformer Engine (TE)
+In same-accelerator Llama-3-family 8B probes, BF16 and Transformer Engine (TE)
 NVFP4 reach 18.8K and 27.6K tokens/s/GPU, while the fastest custom route
 reaches 37.9K. The \mxfp{} recipe with row-gradient stochastic rounding and
 fixed-sign 32-value Hadamard Wgrad preconditioning retains 37.2K tokens/s/GPU,

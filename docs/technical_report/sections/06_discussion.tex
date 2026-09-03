@@ -40,12 +40,19 @@ finds lower Dgrad error for CTA-local in every measured cell. Local operator
 error can therefore motivate a candidate, but the full training trajectory
 adjudicates the recipe.
 
+\subsection{Wider block scales are a complementary direction}
+
 A separate direction is to change the scale representation rather than mix
-the evaluated formats. UE5M3 uses a wider-range unsigned E5M3 block scale and
-supports periodic or delayed tensor-scale refresh \cite{hu2025designspace}.
-Combining that scale format with a CTA-local producer schedule, or evaluating
-delayed tensor scaling without CTA-local outer corrections, was not tested
-here and remains future work.
+the two formats evaluated here. UE5M3 FP4 pairs E2M1 payloads with an unsigned
+E5M3 block scale. Hu et al. report end-to-end Nemotron-H 8B pretraining with
+per-operand, 50-step periodic sample-and-hold tensor scaling, selective SR on
+backward gradients, no RHT, and FP4 in all eligible internal linears
+\cite{hu2026ue5m3}. This is a software-emulated block-scale path on a different
+model and training setup, not one of the native Llama routes measured here.
+It nevertheless shows that a wider block-scale codebook can support a recipe
+with periodic scaling and without RHT. Native UE5M3 combined with a CTA-local
+producer schedule, or with delayed tensor scaling and global outer scales, is
+an untested next step.
 
 \subsection{Limitations}
 

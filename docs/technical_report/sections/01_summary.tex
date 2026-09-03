@@ -4,11 +4,10 @@ Four-bit floating-point (FP4) Tensor Cores accelerate general matrix
 multiplication (GEMM), but GEMM is only part of a large language model (LLM)
 training step. Each FP4 linear layer must also compute scales, round and pack
 values, build the row- and column-oriented layouts consumed in forward and
-backward, and retain the state needed by autograd. Implementing these stages as
-separate kernels repeatedly moves large bfloat16 (BF16) intermediates through
-high-bandwidth memory (HBM). The surrounding work can consume the Tensor Core
-gain even when the FP4 GEMM itself is efficient
-\cite{nvidia2025nvfp4}.
+backward, and retain the state needed by autograd. Separate kernels repeatedly
+move large bfloat16 (BF16) intermediates through high-bandwidth memory (HBM).
+The surrounding work can consume the Tensor Core gain even when the FP4 GEMM
+itself is efficient \cite{nvidia2025nvfp4}.
 
 We address this gap with \emph{format-aware fusion}. Each activation or
 gradient producer emits the scales, physical layouts, and saved state required
@@ -18,7 +17,7 @@ tensor-wide maximum, and cooperative-thread-array-local (CTA-local) \nvfp{}
 completes two outer scales within the tile that owns the matrix multiplication.
 The profitable fusion boundary therefore differs by format.
 
-We evaluate the resulting paths in Llama-8B pretraining at sequence length
+We evaluate the resulting paths in Llama-3-family 8B pretraining at sequence length
 8,192 and global batch 512. Same-accelerator probes measure every route with a
 BF16 output projection and compiled cross entropy (CE), while long
 trajectories cover up to 160B tokens. The fastest custom route reaches 37.9K
@@ -31,13 +30,13 @@ respectively, at measured throughputs of 27.6K and 27.1K tokens/s/GPU.
 This report makes three contributions:
 
 \begin{itemize}
-  \item Format-specific fused execution paths that produce the scales,
-        layouts, and saved state consumed by forward and backward. The fastest
-        custom path reaches 37.9K tokens/s/GPU in the common compiled-CE probe.
-  \item Contraction-specific integration of orientation-consistent 2D
+  \item Native, format-specific execution paths that fuse scale production,
+        physical layouts, and saved backward state. The fastest custom path
+        reaches 37.9K tokens/s/GPU in the common compiled-CE probe.
+  \item Contraction-specific recipes that combine orientation-consistent 2D
         weights, row-only gradient SR, and paired fixed-sign Hadamard
-        preconditioning.
-  \item End-to-end evidence from 160B-token trajectories, same-state operator
-        analysis, checkpoint-matched validation, and downstream evaluation
-        across pure and hybrid recipes.
+        preconditioning with the scale domain of each format.
+  \item A 160B-token comparison of pure and hybrid routes, supported by
+        same-state operator analysis, checkpoint-matched validation, and
+        downstream evaluation.
 \end{itemize}

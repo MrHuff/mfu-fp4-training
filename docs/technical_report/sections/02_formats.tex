@@ -33,6 +33,11 @@ zhao2026ufp4,ding2026fullstack,agrusa2026whatmatters}. Complementary systems
 explore spectral-domain FP4, alternative four-bit formats, and native FP4
 training for mixture-of-experts models
 \cite{cao2026metis,taghian2026hifloat4,du2026halfs,zhang2026hoppermoe}.
+UE5M3 FP4 reallocates the unused sign bit of an E4M3 block scale to a fifth
+exponent bit. Hu et al. combine this wider unsigned scale with periodic
+sample-and-hold tensor scaling and selective backward SR, while omitting RHT
+and using FP4 in every eligible internal linear
+\cite{hu2026ue5m3}.
 
 Three established mechanisms directly shape this work. A weight encoding can
 remain numerically consistent under transposition
@@ -50,6 +55,63 @@ execution boundary. This follows the broader principle that data movement and
 producer--consumer structure determine realized model speed
 \cite{dao2022flashattention,dao2023flashattention2,hsu2024liger,
 wijmans2024cutcrossentropy,spector2024thunderkittens,guo2026coda}.
+
+Table~\ref{tab:prior-work-boundary} separates established numerical mechanisms
+from the integrations evaluated here. The contribution is their format- and
+contraction-specific composition inside complete native training paths.
+
+\begin{table}[tbp]
+  \centering
+  \footnotesize
+  \caption{Relationship to prior work. The left column names the established
+  basis; the right column states the integration evaluated in this report.}
+  \label{tab:prior-work-boundary}
+  \begin{tabularx}{\textwidth}{@{}lYY@{}}
+    \toprule
+    Component & Established basis & This report \\
+    \midrule
+    2D weights
+      & NVFP4 and transposition-invariant quantization share one numerical
+        encoding across forward and backward orientations
+        \cite{nvidia2025nvfp4,rahimifar2026transposition,cim2026nativemxfp4}
+      & Native 2D16 and 2D32 producers emit both consumer layouts inside the
+        global-NVFP4, CTA-local, and MXFP4 execution paths \\
+    Gradient SR
+      & Unbiased rounding and backward-gradient SR are established tools for
+        low-precision training
+        \cite{gupta2015limited,chmiel2025fp4alltheway,ozkara2025sr}
+      & Custom routes apply SR only to the row-facing $dY$ consumed by Dgrad
+        and retain its ranked random state across fused producers and resumes \\
+    Hadamard preconditioning
+      & Paired randomized or deterministic transforms suppress outliers while
+        preserving the unquantized dot product
+        \cite{ashkboos2024quarot,tseng2025mxfp4,nvidia2025nvfp4,
+        cim2026nativemxfp4}
+      & A paired fixed-sign H32 transform is fused into MXFP4 Wgrad; named
+        H16 and H32 routes compare complete recipes under MXFP4 and CTA-local
+        scaling \\
+    Scale scheduling
+      & Standard NVFP4 uses a tensor-global outer scale; MXFP4 uses local
+        power-of-two block scales \cite{ocp2023mx,nvidia2025nvfp4}
+      & Global v5 overlaps the tensor reduction, while CTA-local NVFP4 factors
+        the outer scale by output tile and carries both factors into GEMM \\
+    Fusion and overlap
+      & IO-aware kernels and GEMM--epilogue programs optimize complete
+        producer--consumer boundaries
+        \cite{dao2022flashattention,hsu2024liger,spector2024thunderkittens,
+        guo2026coda}
+      & RMSNorm, QKV, gated-FFN, residual, quantization, dual-layout, and saved
+        backward work are fused or overlapped according to scale completion \\
+    Hybrid assignment
+      & Prior recipes vary precision by layer or module
+        \cite{zhou2025exploringfp4,nvidia2025nvfp4,
+        rahimifar2026transposition}
+      & The operand hybrid assigns MXFP4 or CTA-local NVFP4 per contraction
+        within every linear, motivated by a same-state Dgrad error analysis \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+\FloatBarrier
 
 \subsection{The same four-bit values, three different scale contracts}
 
