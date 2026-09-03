@@ -16,16 +16,6 @@ dependency or resource contention. Fusion removes an HBM round trip only when
 the producer emits every scale, layout, and saved value required by the next
 operation. Accelerating only the GEMM epilogue can leave a global reduction, a
 second tensor orientation, or backward recomputation on the critical path.
-
-\begin{figure}[tbp]
-  \centering
-  \includegraphics[width=0.93\textwidth]{figures/fp4_fusion_dataflow.png}
-  \caption{Format-aware fusion treats normalization, scale production,
-  physical layout, the consuming GEMM, and backward state as one execution
-  boundary.}
-  \label{fig:fusion-dataflow}
-\end{figure}
-
 We implement the fused tensor operations in CUDA and \tk{}
 \cite{spector2024thunderkittens}. Following CODA's GEMM-plus-epilogue framing
 \cite{guo2026coda}, an operation joins a boundary only when the next stage can
@@ -37,42 +27,34 @@ boundary.
 
 \subsection{What is fused in a Llama block}
 
-The system specializes four repeated Llama boundaries.  Table~\ref{tab:fusion-ledger}
-states both the shared algebra and the format-dependent schedule.
+The system specializes the four repeated boundaries in
+Figure~\ref{fig:qkv-ffn-fusion}: QKV forward and backward, and FFN forward and
+backward. The serial schedule writes BF16 intermediates to high-bandwidth
+memory (HBM), reads them back to compute scales and layouts, and repeats that
+cycle before the next GEMM. The fused schedule instead makes each producer
+emit the exact scale metadata, row and column views, and saved BF16 state that
+its consumers require.
 
-\begin{table}[tbp]
+\begin{figure}[tbp]
   \centering
-  \caption{High-level fusion ledger. ``Both views'' means the row and column
-  representations required by Equations~\ref{eq:dgrad}
-  and~\ref{eq:wgrad}.}
-  \label{tab:fusion-ledger}
-  \begin{tabularx}{\textwidth}{lYYY}
-    \toprule
-    Boundary & \mxfp{}-v4 & Global \nvfp{} v5 & \localcta{}-v4 \\
-    \midrule
-    RMSNorm $\rightarrow$ QKV
-      & Row statistics, normalized value, local scales, and both views share a producer
-      & Tensor amax starts with normalization; scale completion and layout are overlapped
-      & Row/column tile outer scales and both views are emitted without a global barrier \\
-    QKV $\rightarrow$ attention
-      & Grouped Q/K/V GEMM; Q/K rotary position embedding (RoPE) is owned by the projection boundary
-      & Same algebra with native NVFP4 payload/scale descriptors
-      & Same algebra; GEMM epilogue applies the two outer corrections \\
-    Gated FFN
-      & W1/W3 scheduling plus sigmoid linear unit (SiLU)--gate output and the W2 input producer
-      & Native 16-value quantization replaces generic TE-to-custom materialization
-      & W2 Dgrad, SiLU derivative, and split W1/W3 backward representations are co-produced \\
-    Residual $\rightarrow$ RMSNorm
-      & Exact residual and row statistics are carried while next FP4 views are formed
-      & Global-scale work is launched early rather than hidden in a nominal epilogue
-      & K-invariant outer scales remain available through the consuming GEMM \\
-    Backward layouts
-      & One producer emits deterministic column payloads and row-SR payloads with checkpointed random state
-      & One native producer emits 16-value hierarchical views and 2D-weight descriptors
-      & One producer emits row/column E2M1, E4M3 per-block scales, and FP32 outer scales \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
+  \includegraphics[width=0.99\textwidth]{figures/fp4_qkv_ffn_fusion_schedule.pdf}
+  \caption{Serial and format-aware execution of the QKV and gated-FFN
+  boundaries. Solid boxes and arrows show values produced and consumed within
+  one execution boundary; they do not imply one monolithic kernel. Purple
+  dashed arrows show stream overlap. Distributed collectives remain separate
+  operations even when their launch overlaps local work. Row stochastic
+  rounding (SR) applies only to the gradient view consumed by Dgrad. A paired
+  fixed-sign Hadamard transform (H), when enabled, applies to both column
+  operands consumed by Wgrad.}
+  \label{fig:qkv-ffn-fusion}
+\end{figure}
+
+The arithmetic remains unchanged. Fusion removes intermediate traffic and
+exposes independent work to the scheduler. The scale stage is nevertheless
+format-specific: \mxfp{} completes a local 32-value reduction; global
+\nvfp{} starts a tensor-wide maximum early; and \localcta{} carries two tile
+outer scales through the complete contraction and applies their product in the
+GEMM epilogue.
 
 The gated FFN illustrates why the boundary extends beyond a GEMM.
 Writing W1 and W3 outputs to BF16, launching a separate SiLU--multiply, then

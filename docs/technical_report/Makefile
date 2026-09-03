@@ -10,6 +10,7 @@ all: figures $(REPORT_PDF)
 
 figures:
 	python figures/make_report_figures.py
+	python figures/build_fusion_schedule_figure.py
 	python figures/build_llama8b_160b_figure.py \
 		--snapshot-in data/llama8b_160b_loss_snapshot_20260827.csv \
 		--seed-adjustment data/llama8b_seed42_loss_adjustment_20260828.csv \
