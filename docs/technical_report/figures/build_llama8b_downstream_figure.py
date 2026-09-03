@@ -98,11 +98,27 @@ def load_rows(path: Path) -> dict[str, dict[str, str]]:
 def main() -> None:
     args = parse_args()
     rows = load_rows(args.ledger)
-    route_order = [route for route in ROUTE_ORDER if route in rows]
-    unknown = sorted(set(rows) - {"bf16", *ROUTE_ORDER})
-    route_order.extend(unknown)
-    if not route_order:
-        raise ValueError("downstream ledger has no completed non-BF16 routes")
+    expected_routes = {"bf16", *ROUTE_ORDER}
+    if set(rows) != expected_routes:
+        missing = sorted(expected_routes - set(rows))
+        unexpected = sorted(set(rows) - expected_routes)
+        raise ValueError(
+            f"downstream route inventory changed: missing={missing}, "
+            f"unexpected={unexpected}"
+        )
+    route_order = ROUTE_ORDER
+
+    delta_by_metric = {
+        field: [
+            100.0 * (float(rows[route][field]) - float(rows["bf16"][field]))
+            for route in route_order
+        ]
+        for field, _ in METRICS
+    }
+    all_deltas = [value for values in delta_by_metric.values() for value in values]
+    common_lower = math.floor(min(0.0, *all_deltas))
+    common_upper = math.ceil(max(0.0, *all_deltas))
+    common_span = common_upper - common_lower
 
     plt.rcParams.update(
         {
@@ -120,13 +136,12 @@ def main() -> None:
     colors = [COLORS.get(route, "#7A8088") for route in route_order]
 
     for axis, (field, title) in zip(axes.flat, METRICS):
-        baseline = float(rows["bf16"][field])
-        deltas = [100.0 * (float(rows[route][field]) - baseline) for route in route_order]
+        deltas = delta_by_metric[field]
         axis.barh(y, deltas, color=colors, height=0.62)
-        lower = min(0.0, *deltas)
-        upper = max(0.0, *deltas)
-        span = max(upper - lower, 1.0)
-        axis.set_xlim(lower - 0.13 * span, upper + 0.13 * span)
+        axis.set_xlim(common_lower, common_upper)
+        axis.set_xticks(
+            np.arange(common_lower, common_upper + 0.1, 2.0, dtype=float)
+        )
         axis.axvline(0.0, color="#30343B", linewidth=1.0)
         axis.set_yticks(y, labels)
         axis.tick_params(axis="y", length=0)
@@ -137,16 +152,16 @@ def main() -> None:
         axis.set_axisbelow(True)
         axis.spines[["top", "right", "left"]].set_visible(False)
         for yi, delta in zip(y, deltas):
-            if delta < 0.0 and abs(delta) >= 0.18 * span:
-                x = delta + 0.025 * span
+            if delta < 0.0 and abs(delta) >= 0.18 * common_span:
+                x = delta + 0.025 * common_span
                 horizontal_alignment = "left"
                 text_color = "white"
             elif delta < 0.0:
-                x = delta - 0.018 * span
+                x = delta - 0.018 * common_span
                 horizontal_alignment = "right"
                 text_color = "#20242A"
             else:
-                x = delta + 0.018 * span
+                x = delta + 0.018 * common_span
                 horizontal_alignment = "left"
                 text_color = "#20242A"
             axis.text(

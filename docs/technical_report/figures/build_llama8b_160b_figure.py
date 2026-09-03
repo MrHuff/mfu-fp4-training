@@ -7,8 +7,9 @@ stops pure-v5 at step 19,000 apart from a terminal marker.  A separate,
 hash-pinned recovery ledger adds 74 exact later log samples from the same r5
 training attempt. Because those fragments are too short for a meaningful
 segment-local EMA, the figure shows their exact observations as faint anchors
-and a robust LOWESS trend as a dashed visual guide.  Endpoint values and
-reported relative differences continue to use observations, never the fit.
+and a robust LOWESS trend with the same visual weight as the other smoothed
+curves. Endpoint values and reported relative differences continue to use
+observations, never the fit.
 
 A checksum-sealed public ledger adds the complete seed-42 TE F0L4 and
 operand-wise fixed-H32 trajectories. Both contain the exact logged grid from
@@ -766,9 +767,9 @@ def plot_recovered_pure_v5(
         trend["tokens_billions"],
         trend["estimated_loss"],
         color=COLORS["pure_v5"],
-        linestyle=(0, (3.0, 1.8)),
-        linewidth=1.7,
-        alpha=0.92,
+        linestyle="-",
+        linewidth=1.9,
+        alpha=0.88,
         zorder=4,
     )
 
@@ -796,20 +797,17 @@ def plot_recovered_pure_v5_gaps(
         trend["tokens_billions"],
         trend["estimated_relative_difference_percent"],
         color=COLORS["pure_v5"],
-        linestyle=(0, (3.0, 1.8)),
-        linewidth=1.7,
-        alpha=0.92,
+        linestyle="-",
+        linewidth=1.9,
+        alpha=0.88,
         zorder=4,
     )
 
 
-def plot_depth_hybrid_telemetry_gap(
-    loss_axis: plt.Axes,
-    gap_axis: plt.Axes,
-    observed: pd.DataFrame,
-    terminals: pd.DataFrame,
+def validate_depth_hybrid_telemetry_gap(
+    observed: pd.DataFrame, terminals: pd.DataFrame
 ) -> None:
-    """Connect the 27/5 endpoint across its telemetry gap without filling it."""
+    """Require the known 27/5 gap while leaving it visibly unconnected."""
 
     lineage = "hybrid_localcta_mxfp4"
     history = observed[observed["lineage"] == lineage].sort_values("step")
@@ -820,28 +818,6 @@ def plot_depth_hybrid_telemetry_gap(
     right = endpoint.iloc[0]
     if int(left["step"]) != 35_530 or int(right["step"]) != 38_140:
         raise RuntimeError("27/5 telemetry-gap endpoints changed")
-
-    bridge_kwargs = {
-        "color": COLORS[lineage],
-        "linestyle": (0, (1.0, 2.0)),
-        "linewidth": 1.35,
-        "alpha": 0.58,
-        "zorder": 3,
-    }
-    loss_axis.plot(
-        [left["tokens_billions"], right["tokens_billions"]],
-        [left["ema31"], right["loss"]],
-        **bridge_kwargs,
-    )
-    if pd.notna(right["endpoint_relative_difference_percent"]):
-        gap_axis.plot(
-            [left["tokens_billions"], right["tokens_billions"]],
-            [
-                left["relative_difference_percent"],
-                right["endpoint_relative_difference_percent"],
-            ],
-            **bridge_kwargs,
-        )
 
 
 def plot(snapshot: pd.DataFrame, output: Path) -> None:
@@ -875,15 +851,12 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
         part = observed[observed["lineage"] == lineage].sort_values("step")
         if part.empty:
             continue
-        style = {
-            "hybrid_localcta_mxfp4": "--",
-        }.get(lineage, "-")
         width = 1.9
         loss_axis.plot(
             part["tokens_billions"],
             part["ema31"],
             color=COLORS[lineage],
-            linestyle=style,
+            linestyle="-",
             linewidth=width,
             label=DISPLAY[lineage],
         )
@@ -891,11 +864,11 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
             part["tokens_billions"],
             part["relative_difference_percent"],
             color=COLORS[lineage],
-            linestyle=style,
+            linestyle="-",
             linewidth=width,
         )
 
-    plot_depth_hybrid_telemetry_gap(loss_axis, gap_axis, observed, terminals)
+    validate_depth_hybrid_telemetry_gap(observed, terminals)
 
     plot_recovered_pure_v5(
         loss_axis, recovered_v5, recovered_v5_trend, terminal_step=38_140
@@ -908,14 +881,15 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
     )
 
     for terminal in terminals.itertuples(index=False):
+        isolated = terminal.segment != "observed_series"
         loss_axis.scatter(
             [terminal.tokens_billions],
             [terminal.loss],
             marker="D",
             s=27,
-            color=COLORS[terminal.lineage],
-            edgecolor="white",
-            linewidth=0.6,
+            facecolor="white" if isolated else COLORS[terminal.lineage],
+            edgecolor=COLORS[terminal.lineage] if isolated else "white",
+            linewidth=1.4 if isolated else 0.6,
             zorder=5,
         )
         if pd.isna(terminal.endpoint_relative_difference_percent):
@@ -925,9 +899,9 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
             [terminal.endpoint_relative_difference_percent],
             marker="D",
             s=29,
-            color=COLORS[terminal.lineage],
-            edgecolor="white",
-            linewidth=0.6,
+            facecolor="white" if isolated else COLORS[terminal.lineage],
+            edgecolor=COLORS[terminal.lineage] if isolated else "white",
+            linewidth=1.4 if isolated else 0.6,
             zorder=6,
         )
 
@@ -960,7 +934,7 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
             [0],
             [0],
             color=COLORS[lineage],
-            linestyle={"hybrid_localcta_mxfp4": "--"}.get(lineage, "-"),
+            linestyle="-",
             linewidth=1.9,
         )
         for lineage in ORDER
@@ -1027,12 +1001,11 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
         ].sort_values("step")
         if part.empty:
             continue
-        style = {"hybrid_localcta_mxfp4": "--"}.get(lineage, "-")
         loss_axis.plot(
             part["tokens_billions"],
             part["ema31"],
             color=COLORS[lineage],
-            linestyle=style,
+            linestyle="-",
             linewidth=1.9,
             label=DISPLAY[lineage],
         )
@@ -1040,11 +1013,11 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
             part["tokens_billions"],
             part["relative_difference_percent"],
             color=COLORS[lineage],
-            linestyle=style,
+            linestyle="-",
             linewidth=1.9,
         )
 
-    plot_depth_hybrid_telemetry_gap(loss_axis, gap_axis, observed, terminals)
+    validate_depth_hybrid_telemetry_gap(observed, terminals)
 
     plot_recovered_pure_v5(
         loss_axis, recovered_v5, recovered_v5_trend, terminal_step=38_140
@@ -1059,14 +1032,15 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
     for terminal in terminals.itertuples(index=False):
         if terminal.tokens_billions < start_tokens:
             continue
+        isolated = terminal.segment != "observed_series"
         loss_axis.scatter(
             [terminal.tokens_billions],
             [terminal.loss],
             marker="D",
             s=27,
-            color=COLORS[terminal.lineage],
-            edgecolor="white",
-            linewidth=0.6,
+            facecolor="white" if isolated else COLORS[terminal.lineage],
+            edgecolor=COLORS[terminal.lineage] if isolated else "white",
+            linewidth=1.4 if isolated else 0.6,
             zorder=5,
         )
         if pd.notna(terminal.endpoint_relative_difference_percent):
@@ -1075,9 +1049,9 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
                 [terminal.endpoint_relative_difference_percent],
                 marker="D",
                 s=29,
-                color=COLORS[terminal.lineage],
-                edgecolor="white",
-                linewidth=0.6,
+                facecolor="white" if isolated else COLORS[terminal.lineage],
+                edgecolor=COLORS[terminal.lineage] if isolated else "white",
+                linewidth=1.4 if isolated else 0.6,
                 zorder=6,
             )
 
@@ -1098,7 +1072,7 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
             [0],
             [0],
             color=COLORS[lineage],
-            linestyle={"hybrid_localcta_mxfp4": "--"}.get(lineage, "-"),
+            linestyle="-",
             linewidth=1.9,
         )
         for lineage in ORDER

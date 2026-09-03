@@ -95,17 +95,34 @@ def escape_unknown_label(value: str) -> str:
 def main() -> None:
     args = parse_args()
     rows = load_rows(args.ledger)
-    unknown = sorted(set(rows) - set(ROUTE_ORDER))
-    order = [route for route in ROUTE_ORDER if route in rows] + unknown
+    expected_routes = set(ROUTE_ORDER)
+    if set(rows) != expected_routes:
+        missing = sorted(expected_routes - set(rows))
+        unexpected = sorted(set(rows) - expected_routes)
+        raise ValueError(
+            f"downstream route inventory changed: missing={missing}, "
+            f"unexpected={unexpected}"
+        )
+
+    maxima = {
+        field: max(float(rows[route][field]) for route in ROUTE_ORDER)
+        for field in METRICS
+    }
 
     lines = ["% Generated from the exact-step downstream ledger; do not edit by hand."]
-    for route in order:
+    for route in ROUTE_ORDER:
         row = rows[route]
         label = ROUTE_LABELS.get(route, escape_unknown_label(route.replace("_", " ")))
-        values = [100.0 * float(row[field]) for field in METRICS]
+        values = []
+        for field in METRICS:
+            raw_value = float(row[field])
+            rendered = f"{100.0 * raw_value:.2f}"
+            if raw_value == maxima[field]:
+                rendered = rf"\textbf{{{rendered}}}"
+            values.append(rendered)
         lines.append(
-            f"{label} & {values[0]:.2f} & {values[1]:.2f} & "
-            f"{values[2]:.2f} & {values[3]:.2f} \\\\"
+            f"{label} & {values[0]} & {values[1]} & "
+            f"{values[2]} & {values[3]} \\\\"
         )
     # Keep the final booktabs rule inside the included fragment.  LaTeX's
     # input-file hook runs after \input returns and is not alignment material;

@@ -67,13 +67,13 @@ loss value is interpolated.
   \centering
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss.png}
   \caption{Llama-8B training loss and relative difference from the BF16
-  reference. Curves use EMA-31. Diamonds mark the final plotted endpoint.
-  Sparse pure-v5 telemetry
-  after step 19,000 is shown as exact anchors with a dashed robust locally
-  weighted scatterplot smoothing (LOWESS) display fit. The fit is not used for
-  endpoint values or comparisons. The dotted tail on the 27/5 depth hybrid
-  marks a telemetry gap from its last continuous observations to the exact
-  terminal point; it does not supply intermediate loss values.}
+  reference. Continuous histories use EMA-31, and diamonds mark the final
+  plotted endpoint. Sparse pure-v5 telemetry after step 19,000 is shown as
+  exact anchors with a robust locally weighted scatterplot smoothing (LOWESS)
+  display fit. The fit is not used for endpoint values or comparisons. The
+  27/5 depth-hybrid line stops at its last continuous observation at step
+  35,530; its open diamond is the separate exact step-38,140 endpoint. The
+  blank interval contains no recovered telemetry.}
   \label{fig:llama8b-loss}
 \end{figure}
 
@@ -84,8 +84,8 @@ the late loss separation at the same scale without extrapolating any route.
   \centering
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss_zoom.png}
   \caption{Training loss from 120B to 160B tokens. Diamonds are exact logged
-  endpoints. The dotted 27/5 tail marks an interval without intermediate
-  telemetry and is not used in any comparison.}
+  endpoints. The open 27/5 diamond is separated from the continuous curve by
+  an interval without recovered telemetry.}
   \label{fig:llama8b-loss-zoom}
 \end{figure}
 
@@ -184,7 +184,8 @@ HellaSwag, WinoGrande, and ARC-Challenge protocol.
   \caption{Exact step-38,000 downstream scores (\%). MMLU and WinoGrande
   report accuracy; HellaSwag and ARC-Challenge report normalized accuracy.
   Shot counts are 5, 10, 5, and 25, respectively. Every route uses BF16
-  inference after exact converted/native parity.}
+  inference after exact converted/native parity. Bold marks the highest
+  observed score in each column.}
   \label{tab:downstream-step38}
   \begin{adjustbox}{max width=\textwidth}
   \begin{tabular}{lrrrr}
@@ -210,8 +211,9 @@ estimates.
   \centering
   \includegraphics[width=0.98\textwidth]{figures/fp4_downstream_delta_bf16.png}
   \caption{Downstream reported-score difference from BF16 at exact step 38,000.
-  Positive values exceed the BF16 score on that task. The absolute scores are
-  reported in Table~\ref{tab:downstream-step38}.}
+  Positive values exceed the BF16 score on that task. All panels use the same
+  percentage-point scale. The absolute scores are reported in
+  Table~\ref{tab:downstream-step38}.}
   \label{fig:downstream-delta}
 \end{figure}
 \FloatBarrier
