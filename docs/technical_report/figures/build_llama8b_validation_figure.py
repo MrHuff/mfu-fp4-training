@@ -39,6 +39,19 @@ ROUTE_LABELS = {
     "operand_h16": "Operand hybrid + plain H16",
     "operand_h32": "Operand hybrid + fixed H32",
 }
+EXPECTED_ROUTE_STEPS = {
+    "bf16": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "te_native": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "te_fol4": {2_000, 10_000, 18_000, 29_000, 38_000, 38_147},
+    "pure_v5": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "mxfp4": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "mxfp4_h32": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "localcta": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "localcta_h16": {10_000, 18_000, 29_000, 38_000},
+    "localcta_mxfp4_hybrid": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "operand_h16": {2_000, 10_000, 18_000, 29_000, 38_000},
+    "operand_h32": {2_000, 3_000, 10_000, 18_000, 19_000, 29_000, 38_000, 38_147},
+}
 COLORS = {
     "bf16": "#30343B",
     "te_native": "#2878B5",
@@ -81,6 +94,9 @@ def load_rows(path: Path) -> list[dict[str, float | int | str]]:
         "status",
         "nll",
         "sequence_level_standard_error",
+        "scored_sequences",
+        "target_tokens",
+        "global_training_tokens",
     }
     if not raw_rows or not required.issubset(raw_rows[0]):
         missing = required - (set(raw_rows[0]) if raw_rows else set())
@@ -90,7 +106,10 @@ def load_rows(path: Path) -> list[dict[str, float | int | str]]:
     seen: set[tuple[str, int]] = set()
     for raw in raw_rows:
         if raw["status"].strip().lower() not in {"complete", "completed", "passed"}:
-            continue
+            raise ValueError(
+                f"validation ledger contains a non-complete row: "
+                f"{raw.get('semantic_route_key')} step {raw.get('exact_step')}"
+            )
         route = raw["semantic_route_key"].strip()
         step = int(raw["exact_step"])
         key = (route, step)
@@ -101,14 +120,15 @@ def load_rows(path: Path) -> list[dict[str, float | int | str]]:
         standard_error = _number(raw, "sequence_level_standard_error")
         if standard_error < 0.0:
             raise ValueError(f"negative standard error for {route} step {step}")
+        if int(raw["scored_sequences"]) != 768:
+            raise ValueError(f"unexpected sequence count for {route} step {step}")
+        if int(raw["target_tokens"]) != 6_291_456:
+            raise ValueError(f"unexpected target-token count for {route} step {step}")
         token_text = raw.get("global_training_tokens", "").strip()
         expected_tokens = step * TOKENS_PER_STEP
-        if not token_text:
-            tokens = float(expected_tokens)
-        else:
-            tokens = float(token_text)
-            if not tokens.is_integer() or tokens <= 0:
-                raise ValueError(f"invalid global_training_tokens for {route} step {step}")
+        tokens = float(token_text)
+        if not tokens.is_integer() or not expected_tokens <= tokens < expected_tokens + TOKENS_PER_STEP:
+            raise ValueError(f"invalid global_training_tokens for {route} step {step}")
         rows.append(
             {
                 "route": route,
@@ -132,9 +152,24 @@ def main() -> None:
     if "bf16" not in by_route:
         raise ValueError("validation ledger has no completed BF16 reference rows")
 
+    expected_cell_count = sum(len(steps) for steps in EXPECTED_ROUTE_STEPS.values())
+    if len(rows) != expected_cell_count:
+        raise ValueError(f"expected {expected_cell_count} exact validation cells, found {len(rows)}")
+    if set(by_route) != set(EXPECTED_ROUTE_STEPS):
+        raise ValueError(
+            f"unexpected validation route inventory: observed={sorted(by_route)} "
+            f"expected={sorted(EXPECTED_ROUTE_STEPS)}"
+        )
+    for route, expected_steps in EXPECTED_ROUTE_STEPS.items():
+        observed_steps = {int(row["step"]) for row in by_route[route]}
+        if observed_steps != expected_steps:
+            raise ValueError(
+                f"unexpected exact-step inventory for {route}: "
+                f"observed={sorted(observed_steps)} expected={sorted(expected_steps)}"
+            )
+
     bf16 = {int(row["step"]): float(row["nll"]) for row in by_route["bf16"]}
-    unknown = sorted(set(by_route) - set(ROUTE_ORDER))
-    order = [route for route in ROUTE_ORDER if route in by_route] + unknown
+    order = [route for route in ROUTE_ORDER if route in by_route]
 
     plt.rcParams.update(
         {

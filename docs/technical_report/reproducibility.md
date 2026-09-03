@@ -88,7 +88,7 @@ The numerical path is:
 3. `tools/evaluation/validation_matrix_r16/evaluate_matrix_task.py` evaluates
    the fixed token panel with Llama-3.1 scaled RoPE and math SDPA.
 4. The r22 collector emits the eight-column scientific ledger. The final
-   public integration extends it to 49 exact route/checkpoint cells without
+   public integration extends it to 58 exact route/checkpoint cells without
    distributing operational receipts or checkpoint metadata. Synthetic CPU
    tests cover seals, geometry, partial outputs, and checksum behavior.
 

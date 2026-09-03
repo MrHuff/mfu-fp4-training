@@ -29,8 +29,8 @@ checkpoint metadata were removed for release.
   table of their exact step-38,140 raw endpoints. Private run and checkpoint
   provenance remains only in the sealed evidence repository.
 - `llama8b_pure_v5_recovered_log_points_20260830.csv` contains 74 sparse,
-  literal observations. The plot shows these as anchors with a display-only
-  LOWESS guide; reported endpoint values remain observed values.
+  literal observations. They anchor a display-only LOWESS guide; reported
+  endpoint values remain observed values.
 - `llama8b_seed42_overlap_20260828.csv` and
   `llama8b_seed42_loss_adjustment_20260828.csv` record the exact overlap and
   robust seed-alignment calculation.
@@ -40,7 +40,7 @@ checkpoint metadata were removed for release.
 ## Validation and downstream inputs
 
 - `llama8b_final_eval_integration_r1_results_20260903/validation/` contains
-  the compact final 49-cell validation ledger. Every complete row scores 768
+  the compact final 58-cell validation ledger. Every complete row scores 768
   sequences and 6,291,456 target tokens.
 - `llama8b_final_eval_integration_r1_results_20260903/downstream/` contains
   the corrected scaled-RoPE downstream ledger for eleven exact step-38,000

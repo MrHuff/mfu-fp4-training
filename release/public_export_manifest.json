@@ -73,12 +73,12 @@
       "docs/technical_report/figures/fp4_fusion_dataflow.png": "852156fa20aa70f21ac757e2e1c5cb202cd2dec635b406a26f6624d48b4877bc",
       "docs/technical_report/figures/fp4_linear_operand_hybrid.png": "92b2b064f282242120a3c4719971f6063655784180dbb1c3ea9fcd39024aa3f6",
       "docs/technical_report/figures/fp4_localcta_scaling.png": "14afdb3e348e3796e1b496c708e8c929737e55966bb9b4a7421bd070a6c7ae1c",
-      "docs/technical_report/figures/fp4_mxfp4_scale_rounding.png": "e5534139e61b019205c5a5a125a4ca285c06fd4c747a1a2355e30ca6faa6696e",
+      "docs/technical_report/figures/fp4_mxfp4_scale_rounding.png": "4cb225f56c15ec530b2359a33426bd9c45a677c93e88fb9538e219a1908b78bf",
       "docs/technical_report/figures/fp4_qkv_ffn_fusion_schedule.pdf": "706279b1bcd08cbeffdb7f8ac9f1e4e04741f30b17c70b2991f8217cb44ba575",
       "docs/technical_report/figures/fp4_recipe_cost_ledger.png": "b15589a6db766f92188acbadbebcf2c2f3c1fa376a802502d4013c500ae29efe",
-      "docs/technical_report/figures/llama8b_160b_training_loss.png": "c4917c5e8301a1623764a8784b032b43088f4594099237b530f7ac26c49c9e73",
-      "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png": "c6aef7cfb096ca4834fc60ba8f5ce7275adb2471438ccaa741e8f0e8d9ce3f1e",
-      "docs/technical_report/figures/llama8b_validation_nll.png": "aa06efdec67942288742006d1c34e9dfe03a3b889f415cbb85285ee41daff5d1"
+      "docs/technical_report/figures/llama8b_160b_training_loss.png": "b3d20256007b3184ae523a9f24f7f91ad8282c40c618f903f2596da9f137f76b",
+      "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png": "57d068b78285551d5c009bebe496a549f2d81b47aacaddc884eb1eb1cd3f5554",
+      "docs/technical_report/figures/llama8b_validation_nll.png": "3ff6c791113969c4d8b38ac4d364f6ef679eadc89fe5cb1e999f835a07152c5b"
     },
     "exclude": [
       ".DS_Store",

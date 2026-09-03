@@ -3,13 +3,12 @@
 
 The primary input is the immutable, observed-point snapshot published with
 this report. That snapshot
-stops pure-v5 at step 19,000 apart from a terminal marker.  A separate,
+stops pure-v5 at step 19,000 apart from a terminal marker. A separate,
 hash-pinned recovery ledger adds 74 exact later log samples from the same r5
-training attempt. Because those fragments are too short for a meaningful
-segment-local EMA, the figure shows their exact observations as faint anchors
-and a robust LOWESS trend with the same visual weight as the other smoothed
-curves. Endpoint values and reported relative differences continue to use
-observations, never the fit.
+training attempt. Because those fragments are too sparse for the EMA used by
+the continuous histories, the figure displays a robust LOWESS trend over the
+sealed observations. The source points remain in the public ledger; endpoint
+values and tabulated endpoint differences use observations, never the fit.
 
 A checksum-sealed public ledger adds the complete seed-42 TE F0L4 and
 operand-wise fixed-H32 trajectories. Both contain the exact logged grid from
@@ -880,19 +879,9 @@ def plot_recovered_pure_v5(
     trend: pd.DataFrame,
     terminal_step: int,
 ) -> None:
-    """Draw exact late anchors plus a clearly estimated robust trend."""
+    """Draw the estimated late trend; exact anchors remain in the public CSV."""
 
-    visible = recovered[recovered["step"] != terminal_step]
-    axis.scatter(
-        visible["tokens_billions"],
-        visible["loss"],
-        marker="o",
-        s=7,
-        color=COLORS["pure_v5"],
-        alpha=0.26,
-        linewidth=0,
-        zorder=4,
-    )
+    del recovered, terminal_step
     axis.plot(
         trend["tokens_billions"],
         trend["estimated_loss"],
@@ -910,19 +899,9 @@ def plot_recovered_pure_v5_gaps(
     trend: pd.DataFrame,
     terminal_step: int,
 ) -> None:
-    """Draw raw paired anchors plus their robust estimated trend."""
+    """Draw the estimated late gap trend; exact anchors remain in the ledger."""
 
-    visible = matched[matched["step"] != terminal_step]
-    axis.scatter(
-        visible["tokens_billions"],
-        visible["relative_difference_percent"],
-        marker="o",
-        s=7,
-        color=COLORS["pure_v5"],
-        alpha=0.26,
-        linewidth=0,
-        zorder=4,
-    )
+    del matched, terminal_step
     axis.plot(
         trend["tokens_billions"],
         trend["estimated_relative_difference_percent"],
@@ -1077,7 +1056,7 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
 
 
 def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
-    """Render the same exact-step evidence over the final 40B tokens."""
+    """Render the same trajectories over the final 40B-token display window."""
 
     snapshot = snapshot[snapshot["lineage"].isin(ORDER)].copy()
     observed = add_exact_step_bf16_gaps(snapshot)

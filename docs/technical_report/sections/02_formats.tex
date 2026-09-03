@@ -66,14 +66,7 @@ producer--consumer structure determine realized model speed
 wijmans2024cutcrossentropy,spector2024thunderkittens,guo2026coda}.
 
 Table~\ref{tab:prior-work-boundary} pairs each established mechanism with the
-concrete delta evaluated here. LUQ means \emph{logarithmic unbiased
-quantization}: it makes logarithmic neural-gradient quantization unbiased by
-treating underflow probabilistically, rounding between adjacent logarithmic
-levels, and deriving the range from the tensor maximum so no value clips at
-the upper endpoint \cite{chmiel2023accurate}. Here, \emph{saturation} means
-clipping a magnitude above the scaled E2M1 maximum, $q_{\max}$, to
-$q_{\max}$. Because there is no representable upper neighbor, this clipping
-introduces systematic bias.
+concrete delta evaluated here.
 
 \begin{table}[tbp]
   \centering
@@ -85,15 +78,6 @@ introduces systematic bias.
     \toprule
     Component & Established method & Our delta \\
     \midrule
-    SR rule
-      & FP4 All the Way uses distance-proportional SR between adjacent
-        representable values for backward and update quantization
-        \cite{chmiel2025fp4alltheway}. At the upper endpoint, a larger scaled
-        magnitude saturates by clipping to $q_{\max}$
-      & We use the same adjacent-value probability on finite E2M1 bins, while
-        the representable range follows each route's microscale contract.
-        Rank-specific RNG state is fused into the producer and preserved across
-        resumes \\
     SR placement
       & Chmiel et al. use SR in Dgrad and on both Wgrad operands; NVIDIA applies
         gradient SR to both Dgrad and Wgrad
@@ -142,11 +126,12 @@ numerical and scheduling behavior nevertheless
 differs because they assign scales to different domains.  A useful common
 notation for one scalar is
 \begin{equation}
-  \widehat z_i = S\,s_{b(i)}
-  Q_{\mathrm{E2M1}}\!\left(\frac{z_i}{S\,s_{b(i)}}\right),
+  \widehat z_i = S\,\delta_{b(i)}
+  Q_{\mathrm{E2M1}}\!\left(\frac{z_i}{S\,\delta_{b(i)}}\right),
   \label{eq:hierarchical-quant}
 \end{equation}
-where $s_{b(i)}$ is a block scale, $S$ is an optional outer scale, and
+where $\delta_{b(i)}$ is the effective block dequantization multiplier, $S$
+is an optional outer scale, and
 $Q_{\mathrm{E2M1}}$ rounds and saturates to E2M1.  The scale choice determines
 both quantization error and when the producer may safely release its output.
 
@@ -169,9 +154,44 @@ both quantization error and when the producer may safely release its output.
 
 E8M0 represents a power-of-two scale with eight exponent bits and no fraction;
 E4M3 is an FP8 scale with four exponent and three fraction bits. In \mxfp{},
-$S=1$ and $s_b$ is an E8M0 power of two shared by 32 values.
+$S=1$, $s_b$ is an E8M0 power of two shared by 32 values, and the effective
+multiplier in Equation~\ref{eq:hierarchical-quant} is $\delta_b=s_b/6$.
 The block maximum therefore produces a scale locally, but adjacent scale
-levels differ by exactly two.  Global \nvfp{} instead uses an E4M3 scale for
+levels differ by exactly two. The reported \mxfp{}-v4 routes use an
+encode-centric scale for activation and gradient blocks. For block maximum
+$a_b=\max_i|z_i|$, they compute
+\begin{equation}
+  s_b=2^{\lceil\log_2 a_b\rceil},\qquad
+  q_i=Q_{\mathrm{E2M1}}\!\left(\frac{6z_i}{s_b}\right),\qquad
+  \widehat z_i=\frac{s_b}{6}q_i.
+  \label{eq:mxfp4-encode-scale}
+\end{equation}
+Rounding the exponent upward keeps the block maximum inside the finite E2M1
+range. A decode-centric alternative rounds the exponent downward, yielding a
+denser grid at the cost of possible clipping; it is implemented but is not
+used by the reported \mxfp{} activation or gradient paths. The orientation-consistent
+2D32 weight producer uses a separate adaptive rule: it starts from the safe
+upward-rounded scale $s_T$ for the maximum $a_T$ over a $32\!\times\!32$
+weight tile, then selects $s_T/2$ for a nonzero normal tile when
+$a_T/s_T<0.87$. The
+calibrated threshold trades limited tile-endpoint clipping for a grid twice as
+dense. E8M0 scale stochastic rounding is disabled in these recipes.
+``Row-SR'' elsewhere in the paper instead denotes stochastic rounding of the
+E2M1 gradient payload.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.96\textwidth]{figures/fp4_mxfp4_scale_rounding.png}
+  \caption{Encode- and decode-centric E8M0 scale selection. Rounding the block
+  maximum upward preserves the E2M1 endpoint. For a non-power-of-two maximum,
+  rounding it downward halves the decoded grid spacing but can clip large
+  values. The reported activation and gradient paths use the encode-centric
+  rule. Their 2D32 weight path selects the smaller scale only under the
+  calibrated $a_T/s_T<0.87$ condition.}
+  \label{fig:mxfp4-scale-rounding}
+\end{figure}
+
+Global \nvfp{} instead uses an E4M3 scale for
 each 16 values and an FP32 tensor scale $S$ \cite{ocp2023mx,nvidia2025nvfp4}.
 Its local grid is finer, but every block depends on the completed tensor amax,
 the maximum absolute value.

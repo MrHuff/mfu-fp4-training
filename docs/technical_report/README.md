@@ -16,7 +16,7 @@ lineage, run/pod/workload identities, private storage names, service-account
 identities, and credentials are intentionally absent. Their removal does not
 change the paper's numerical rows. Content hashes in `data/SHA256SUMS` bind
 every published data input. Complete F0L4 and operand-wise fixed-H32
-trajectories and the final 49-cell validation and eleven-route downstream
+trajectories and the final 58-cell validation and eleven-route downstream
 ledgers are included as public, identity-free scientific tables.
 
 ## Build

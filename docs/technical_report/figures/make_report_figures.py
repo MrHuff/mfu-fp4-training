@@ -764,25 +764,25 @@ def make_mxfp4_scale_rounding() -> None:
         ax.set_ylim(0, 1)
         ax.axis("off")
 
-    axes[0].set_title("Encode-safe scale: round exponent upward")
-    _box(axes[0], 0.06, 0.67, 0.34, 0.16, "ideal $s^*=\\max|x|/6$", MID)
-    _box(axes[0], 0.60, 0.67, 0.34, 0.16, "$2^{\\lceil\\log_2 s^*\\rceil}$", BLUE)
+    axes[0].set_title("Encode-centric scale: round amax upward")
+    _box(axes[0], 0.06, 0.67, 0.34, 0.16, "$a=\\max|x|$", MID)
+    _box(axes[0], 0.60, 0.67, 0.34, 0.16, "$s=2^{\\lceil\\log_2 a\\rceil}$", BLUE)
     _arrow(axes[0], 0.40, 0.75, 0.60, 0.75)
     _box(axes[0], 0.19, 0.34, 0.62, 0.18, "block maximum fits\nno E2M1 saturation", GREEN)
     _arrow(axes[0], 0.77, 0.67, 0.66, 0.52)
     axes[0].text(
         0.50,
         0.16,
-        "Safer encoding, but the quantization step can be up to 2x coarser.",
+        "Encode $Q(6x/s)$ and reconstruct $(s/6)Q$; the maximum stays finite.",
         ha="center",
         fontsize=9.5,
         color=MID,
         wrap=True,
     )
 
-    axes[1].set_title("Decode-dense scale: round exponent downward")
-    _box(axes[1], 0.06, 0.67, 0.34, 0.16, "ideal $s^*=\\max|x|/6$", MID)
-    _box(axes[1], 0.60, 0.67, 0.34, 0.16, "$2^{\\lfloor\\log_2 s^*\\rfloor}$", TEAL)
+    axes[1].set_title("Decode-centric scale: round amax downward")
+    _box(axes[1], 0.06, 0.67, 0.34, 0.16, "$a=\\max|x|$", MID)
+    _box(axes[1], 0.60, 0.67, 0.34, 0.16, "$s=2^{\\lfloor\\log_2 a\\rfloor}$", TEAL)
     _arrow(axes[1], 0.40, 0.75, 0.60, 0.75)
     _box(
         axes[1],
@@ -797,8 +797,7 @@ def make_mxfp4_scale_rounding() -> None:
     axes[1].text(
         0.50,
         0.16,
-        "Adjacent E8M0 scales differ by exactly 2; this is the mechanism "
-        "behind one-step scale halving.",
+        "The same decode rule uses a grid up to 2x denser, but large values may clip.",
         ha="center",
         fontsize=9.5,
         color=MID,

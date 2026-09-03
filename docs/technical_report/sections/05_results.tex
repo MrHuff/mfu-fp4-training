@@ -59,8 +59,9 @@ relative-difference convention used by NVIDIA
   \label{eq:relative-loss}
 \end{equation}
 Zero is the BF16 reference and a negative value means the low-precision route
-has higher loss. Curves are compared only at exact shared logged steps; no
-loss value is interpolated.
+has higher loss. Reported comparisons use exact shared logged steps; no
+reported loss value is interpolated. The v5 line is the display-only fit
+described below.
 
 \begin{figure}[tbp]
   \centering
@@ -82,7 +83,8 @@ the late loss separation at the same scale without extrapolating any route.
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss_zoom.png}
   \caption{Training loss from 120B to 160B tokens. Diamonds mark exact logged
   endpoints. The 27/5 curve uses its complete logged history without
-  interpolation.}
+  interpolation. As in Figure~\ref{fig:llama8b-loss}, the sparse late-v5
+  observations are shown by a display-only LOWESS fit.}
   \label{fig:llama8b-loss-zoom}
 \end{figure}
 
@@ -135,16 +137,16 @@ the lowest observed validation NLL, 2.422804. BF16 records 2.430206, the TE
 route with four final BF16 blocks 2.437475, and TE-native 2.440488. The
 fixed-H32 operand hybrid records 2.463842, compared with 2.460331 for
 \localcta{} and 2.462074 for global \nvfp{} v5. Relative to BF16, the
-relative NLL differences $100(L_{\mathrm{route}}-L_{\mathrm{BF16}})/L_{\mathrm{BF16}}$
+relative NLL differences $100(L_{\mathrm{BF16}}-L_{\mathrm{route}})/L_{\mathrm{BF16}}$
 for \mxfp{}-H32, four-final-BF16-block, and operand-H32 are
-$-0.305\%$, $+0.299\%$, and $+1.384\%$, respectively. These are observed
+$+0.305\%$, $-0.299\%$, and $-1.384\%$, respectively; positive values
+indicate lower NLL than BF16. These are observed
 single-trajectory comparisons, not a one-factor isolation of H32 or
 repeated-seed estimates.
 
-The 27/5 depth hybrid contributes one terminal exact checkpoint, at step
-38,000. Its validation NLL is 2.538116, or 4.440\% higher than matched BF16.
-No earlier exact checkpoint is available for this route, so we report the one
-measured point without constructing an intermediate curve.
+The 27/5 depth hybrid is evaluated at the five common cuts: steps 2,000,
+10,000, 18,000, 29,000, and 38,000. At step 38,000 its validation NLL is
+2.538116, or 4.440\% higher than matched BF16.
 
 \begin{figure}[tbp]
   \centering
@@ -153,9 +155,7 @@ measured point without constructing an intermediate curve.
   checkpoint. Error bars are 95\% sequence-level intervals. The lower panel
   reports $100(L_{\mathrm{BF16}}-L_{\mathrm{route}})/L_{\mathrm{BF16}}$ at
   exact shared steps, so negative values are worse than BF16. Lines connect
-  measured checkpoints only; missing checkpoints are neither interpolated nor
-  extrapolated. The 27/5 depth hybrid contributes only its terminal step-38,000
-  marker.}
+  evaluated checkpoints only; no value is interpolated or extrapolated.}
   \label{fig:llama8b-validation}
 \end{figure}
 
