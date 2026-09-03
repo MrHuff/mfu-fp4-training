@@ -15,6 +15,11 @@ A checksum-sealed public ledger adds the complete seed-42 TE F0L4 and
 operand-wise fixed-H32 trajectories. Both contain the exact logged grid from
 step 1 through 38,140; no values are interpolated.
 
+The 27/5 depth-hybrid history is a checkpoint-aware stitch of three W&B
+segments.  Its checksum-sealed public ledger contains the exact logged grid
+from step 1 through 38,140.  Resume-overrun rows are excluded at the two
+checkpoint boundaries, and no value is interpolated.
+
 The operand-wise plain-H16 hybrid is a checksum-sealed 3,815-point numerical
 trajectory with no interpolated or missing observations. Operational restore
 lineage is deliberately absent from the public CSV.
@@ -63,6 +68,9 @@ EXPECTED_LOCALCTA_RHT_CANONICAL_SHA256 = (
 )
 EXPECTED_OPERAND_H16_HISTORY_SHA256 = (
     "b6102b426d85f98e9fcadfac3459d7201b370ae12c48e4417b9170d3cf1be8bb"
+)
+EXPECTED_DEPTH_HYBRID_HISTORY_SHA256 = (
+    "24f9e6a423fa839146530b427c00821f0bad629eac38b6a2983d2103abd8eb42"
 )
 TARGET_STEP = 38_147
 
@@ -276,7 +284,9 @@ def load_terminal_history(
     if len(frame) != 3_815 or frame["step"].astype(int).tolist() != expected_steps:
         raise RuntimeError(f"{plot_lineage} cadence or endpoint changed")
     if frame["step"].duplicated().any() or not frame["step"].is_monotonic_increasing:
-        raise RuntimeError(f"{plot_lineage} steps are not strictly increasing and unique")
+        raise RuntimeError(
+            f"{plot_lineage} steps are not strictly increasing and unique"
+        )
     if set(frame["lineage"]) != {source_lineage}:
         raise RuntimeError(f"{plot_lineage} history contains another lineage")
     if frame["is_interpolated"].astype(str).str.lower().ne("false").any():
@@ -301,7 +311,10 @@ def load_terminal_history(
     terminal = frame.iloc[-1]
     if not (
         math.isclose(
-            float(terminal["loss"]), expected_terminal_loss, rel_tol=0.0, abs_tol=1.0e-15
+            float(terminal["loss"]),
+            expected_terminal_loss,
+            rel_tol=0.0,
+            abs_tol=1.0e-15,
         )
         and math.isclose(
             float(terminal["grad_norm"]),
@@ -319,6 +332,128 @@ def load_terminal_history(
     frame["segment"] = "observed_series"
     reduced = pd.concat([frame.iloc[::5], frame.tail(1)])
     return reduced.drop_duplicates("step", keep="last")
+
+
+def load_depth_hybrid_history(path: Path) -> pd.DataFrame:
+    """Load the complete checkpoint-aware 27/5 W&B history."""
+
+    actual_sha = sha256(path)
+    if actual_sha != EXPECTED_DEPTH_HYBRID_HISTORY_SHA256:
+        raise RuntimeError(
+            f"unexpected 27/5 history SHA-256: {actual_sha}; "
+            f"expected {EXPECTED_DEPTH_HYBRID_HISTORY_SHA256}"
+        )
+    frame = pd.read_csv(path)
+    required = {
+        "source_segment",
+        "step",
+        "loss",
+        "global_max_loss",
+        "grad_norm",
+        "tps_per_gpu",
+        "mfu",
+        "n_tokens_seen",
+        "lr",
+    }
+    if set(frame.columns) != required:
+        raise RuntimeError("27/5 history schema is not exact")
+
+    expected_steps = [1, *range(10, 38_141, 10)]
+    if len(frame) != 3_815 or frame["step"].astype(int).tolist() != expected_steps:
+        raise RuntimeError("27/5 history cadence or endpoint changed")
+    if frame["step"].duplicated().any() or not frame["step"].is_monotonic_increasing:
+        raise RuntimeError("27/5 history steps are not strictly increasing and unique")
+
+    segment_contract = (
+        ("fresh_through_step16000", [1, *range(10, 16_001, 10)]),
+        ("resume_step16000_to35000", list(range(16_010, 35_001, 10))),
+        ("resume_step35000_to38140", list(range(35_010, 38_141, 10))),
+    )
+    for segment, steps in segment_contract:
+        observed_steps = frame.loc[frame["source_segment"] == segment, "step"].astype(
+            int
+        )
+        if observed_steps.tolist() != steps:
+            raise RuntimeError(f"27/5 {segment} splice contract changed")
+    if set(frame["source_segment"]) != {item[0] for item in segment_contract}:
+        raise RuntimeError("27/5 history contains an unexpected source segment")
+
+    numeric = [
+        "step",
+        "loss",
+        "global_max_loss",
+        "grad_norm",
+        "tps_per_gpu",
+        "mfu",
+        "n_tokens_seen",
+        "lr",
+    ]
+    if not frame[numeric].map(math.isfinite).all().all():
+        raise RuntimeError("27/5 history contains nonfinite evidence")
+    expected_tokens = frame["step"].astype(int) * TOKENS_PER_STEP
+    if not frame["n_tokens_seen"].astype(int).equals(expected_tokens):
+        raise RuntimeError("27/5 token counters do not match the step contract")
+
+    terminal = frame.iloc[-1]
+    terminal_contract = {
+        "loss": 2.4768424034118652,
+        "global_max_loss": 2.9709818363189697,
+        "grad_norm": 0.0720905289053917,
+    }
+    for metric, expected in terminal_contract.items():
+        if not math.isclose(
+            float(terminal[metric]), expected, rel_tol=0.0, abs_tol=1.0e-15
+        ):
+            raise RuntimeError(f"27/5 terminal {metric} changed")
+
+    frame = frame.copy()
+    frame["lineage"] = "hybrid_localcta_mxfp4"
+    frame["display_name"] = DISPLAY["hybrid_localcta_mxfp4"]
+    frame["value_precision"] = "exported_float_payload"
+    frame["is_interpolated"] = False
+    frame["ema31"] = frame["loss"].ewm(span=31, adjust=False).mean()
+    frame["segment"] = "observed_series"
+    return frame
+
+
+def attach_depth_hybrid_history(
+    snapshot: pd.DataFrame, complete_history: pd.DataFrame
+) -> pd.DataFrame:
+    """Supersede the stale snapshot tail after verifying its shared prefix."""
+
+    lineage = "hybrid_localcta_mxfp4"
+    legacy_observed = snapshot[
+        (snapshot["lineage"] == lineage) & (snapshot["segment"] == "observed_series")
+    ]
+    overlap = legacy_observed.merge(
+        complete_history,
+        on="step",
+        how="left",
+        suffixes=("_legacy", "_complete"),
+        validate="one_to_one",
+    )
+    if len(legacy_observed) != 712 or overlap["loss_complete"].isna().any():
+        raise RuntimeError("27/5 legacy-prefix inventory changed")
+    for metric in (
+        "loss",
+        "global_max_loss",
+        "grad_norm",
+        "tps_per_gpu",
+        "mfu",
+        "n_tokens_seen",
+        "lr",
+    ):
+        difference = (
+            overlap[f"{metric}_legacy"].astype(float)
+            - overlap[f"{metric}_complete"].astype(float)
+        ).abs()
+        if not difference.le(1.0e-12).all():
+            raise RuntimeError(f"27/5 complete history disagrees on shared {metric}")
+
+    display_history = pd.concat([complete_history.iloc[::5], complete_history.tail(1)])
+    display_history = display_history.drop_duplicates("step", keep="last")
+    without_legacy = snapshot[snapshot["lineage"] != lineage].copy()
+    return pd.concat([without_legacy, display_history], ignore_index=True, sort=False)
 
 
 def attach_recovered_pure_v5(
@@ -479,9 +614,7 @@ def load_localcta_rht_history(path: Path) -> pd.DataFrame:
     expected_tokens = frame["step"].astype(int) * TOKENS_PER_STEP
     if not frame["tokens"].astype(int).equals(expected_tokens):
         raise RuntimeError("localCTA+RHT token counts do not match the step contract")
-    if not (
-        (frame["tokens_billions"] - frame["tokens"] / 1.0e9).abs() < 1.0e-12
-    ).all():
+    if not ((frame["tokens_billions"] - frame["tokens"] / 1.0e9).abs() < 1.0e-12).all():
         raise RuntimeError("localCTA+RHT billion-token coordinates are inconsistent")
 
     frame = frame.copy()
@@ -645,8 +778,7 @@ def recovered_pure_v5_gap_points(snapshot: pd.DataFrame) -> pd.DataFrame:
 
     recovered = recovered_pure_v5_points(snapshot)
     bf16 = snapshot[
-        (snapshot["lineage"] == "bf16")
-        & (snapshot["segment"] == "observed_series")
+        (snapshot["lineage"] == "bf16") & (snapshot["segment"] == "observed_series")
     ][["step", "loss"]].rename(columns={"loss": "bf16_loss"})
     matched = recovered.merge(bf16, on="step", how="inner", validate="one_to_one")
     # The sealed ledgers share 17 intermediate steps and the step-38,140
@@ -654,9 +786,7 @@ def recovered_pure_v5_gap_points(snapshot: pd.DataFrame) -> pd.DataFrame:
     if len(matched) != 18 or 38_140 not in set(matched["step"].astype(int)):
         raise RuntimeError("recovered pure-v5/BF16 exact-step inventory changed")
     matched["relative_difference_percent"] = (
-        100.0
-        * (matched["bf16_loss"] - matched["loss"])
-        / matched["bf16_loss"]
+        100.0 * (matched["bf16_loss"] - matched["loss"]) / matched["bf16_loss"]
     )
     if not matched["relative_difference_percent"].map(math.isfinite).all():
         raise RuntimeError("recovered pure-v5/BF16 raw differences are nonfinite")
@@ -706,8 +836,7 @@ def estimated_pure_v5_gap_trend(
         & (snapshot["step"] >= 17_500)
     ][["step", "loss"]].rename(columns={"loss": "v5_loss"})
     bf16 = snapshot[
-        (snapshot["lineage"] == "bf16")
-        & (snapshot["segment"] == "observed_series")
+        (snapshot["lineage"] == "bf16") & (snapshot["segment"] == "observed_series")
     ][["step", "loss"]].rename(columns={"loss": "bf16_loss"})
     dense_matched = v5_dense.merge(bf16, on="step", how="inner", validate="one_to_one")
     dense_matched["relative_difference_percent"] = (
@@ -737,9 +866,10 @@ def estimated_pure_v5_gap_trend(
     )
     trend = trend[trend["step"] >= 19_000].copy()
     trend["tokens_billions"] = trend["step"] * TOKENS_PER_STEP / 1.0e9
-    if len(trend) != 19 or not trend[
-        "estimated_relative_difference_percent"
-    ].map(math.isfinite).all():
+    if (
+        len(trend) != 19
+        or not trend["estimated_relative_difference_percent"].map(math.isfinite).all()
+    ):
         raise RuntimeError("pure-v5 late relative-trend fit contract changed")
     return trend
 
@@ -804,22 +934,6 @@ def plot_recovered_pure_v5_gaps(
     )
 
 
-def validate_depth_hybrid_telemetry_gap(
-    observed: pd.DataFrame, terminals: pd.DataFrame
-) -> None:
-    """Require the known 27/5 gap while leaving it visibly unconnected."""
-
-    lineage = "hybrid_localcta_mxfp4"
-    history = observed[observed["lineage"] == lineage].sort_values("step")
-    endpoint = terminals[terminals["lineage"] == lineage]
-    if history.empty or len(endpoint) != 1:
-        raise RuntimeError("27/5 telemetry-gap inventory changed")
-    left = history.iloc[-1]
-    right = endpoint.iloc[0]
-    if int(left["step"]) != 35_530 or int(right["step"]) != 38_140:
-        raise RuntimeError("27/5 telemetry-gap endpoints changed")
-
-
 def plot(snapshot: pd.DataFrame, output: Path) -> None:
     snapshot = snapshot[snapshot["lineage"].isin(ORDER)].copy()
     plt.rcParams.update(
@@ -843,9 +957,7 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
     recovered_v5 = recovered_pure_v5_points(snapshot)
     recovered_v5_gaps = recovered_pure_v5_gap_points(snapshot)
     recovered_v5_trend = estimated_pure_v5_trend(snapshot)
-    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(
-        snapshot, recovered_v5_gaps
-    )
+    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(snapshot, recovered_v5_gaps)
 
     for lineage in ORDER:
         part = observed[observed["lineage"] == lineage].sort_values("step")
@@ -867,8 +979,6 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
             linestyle="-",
             linewidth=width,
         )
-
-    validate_depth_hybrid_telemetry_gap(observed, terminals)
 
     plot_recovered_pure_v5(
         loss_axis, recovered_v5, recovered_v5_trend, terminal_step=38_140
@@ -977,12 +1087,8 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
     recovered_v5 = recovered_pure_v5_points(snapshot)
     recovered_v5_gaps = recovered_pure_v5_gap_points(snapshot)
     recovered_v5_trend = estimated_pure_v5_trend(snapshot)
-    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(
-        snapshot, recovered_v5_gaps
-    )
-    recovered_v5 = recovered_v5[
-        recovered_v5["tokens_billions"] >= start_tokens
-    ].copy()
+    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(snapshot, recovered_v5_gaps)
+    recovered_v5 = recovered_v5[recovered_v5["tokens_billions"] >= start_tokens].copy()
     recovered_v5_gaps = recovered_v5_gaps[
         recovered_v5_gaps["tokens_billions"] >= start_tokens
     ].copy()
@@ -1016,8 +1122,6 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
             linestyle="-",
             linewidth=1.9,
         )
-
-    validate_depth_hybrid_telemetry_gap(observed, terminals)
 
     plot_recovered_pure_v5(
         loss_axis, recovered_v5, recovered_v5_trend, terminal_step=38_140
@@ -1117,6 +1221,7 @@ def main() -> None:
     parser.add_argument("--mxfp4-rht-history", type=Path, required=True)
     parser.add_argument("--localcta-rht-history", type=Path, required=True)
     parser.add_argument("--operand-h16-history", type=Path, required=True)
+    parser.add_argument("--depth-hybrid-history", type=Path, required=True)
     parser.add_argument("--figure-out", type=Path, required=True)
     parser.add_argument("--zoom-figure-out", type=Path, required=True)
     args = parser.parse_args()
@@ -1131,6 +1236,9 @@ def main() -> None:
         snapshot = load_snapshot(args.snapshot_in)
     snapshot = attach_recovered_pure_v5(
         snapshot, load_recovered_pure_v5(args.pure_v5_recovered)
+    )
+    snapshot = attach_depth_hybrid_history(
+        snapshot, load_depth_hybrid_history(args.depth_hybrid_history)
     )
     snapshot = pd.concat(
         [

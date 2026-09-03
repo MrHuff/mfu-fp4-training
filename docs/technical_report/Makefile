@@ -20,6 +20,7 @@ figures:
 		--mxfp4-rht-history data/llama8b_mxfp4_rht_history_20260831.csv \
 		--localcta-rht-history data/llama8b_localcta_rht_canonical_metrics_20260830.csv \
 		--operand-h16-history data/llama8b_operand_h16_history_20260902.csv \
+		--depth-hybrid-history data/llama8b_localcta_mxfp4_27_5_history_20260903.csv \
 		--figure-out figures/llama8b_160b_training_loss.png \
 		--zoom-figure-out figures/llama8b_160b_training_loss_zoom.png
 	python figures/build_llama8b_downstream_figure.py \

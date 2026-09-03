@@ -14,6 +14,11 @@ were removed for release.
   `llama8b_localcta_rht_canonical_metrics_20260830.csv`, and
   `llama8b_operand_h16_history_20260902.csv` are complete 3,815-row route
   trajectories containing only numerical and semantic-route fields.
+- `llama8b_localcta_mxfp4_27_5_history_20260903.csv` is the complete
+  checkpoint-aware 27/5 depth-hybrid trajectory. It replaces a stale snapshot
+  that had been exported while the final continuation was still running.
+  Its 3,815 rows are literal W&B observations; the splice excludes overrun
+  updates after each restored checkpoint and does not interpolate values.
 - `llama8b_terminal_training_history_r1_results_20260903/` contains complete
   3,815-row TE F0L4 and operand-wise fixed-H32 trajectories plus a compact
   table of their exact step-38,140 raw endpoints. Private run and checkpoint
