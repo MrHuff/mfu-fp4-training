@@ -79,8 +79,7 @@ pair; it never transforms the stored weight.
   \centering
   \footnotesize
   \caption{Rounding and precision policy. Every row uses a BF16 output
-  projection. The machine-readable ledger records the full stochastic
-  namespaces and the recovered seed metadata.}
+  projection.}
   \label{tab:recipe-state-ledger}
   \begin{tabularx}{\textwidth}{@{}lYYY@{}}
     \toprule
@@ -114,8 +113,8 @@ the stored weight; it quantizes $X$ and $dY$ with MXFP4. This is a
 deliberate contraction-specific recipe rather than two layouts of one shared
 FP4 weight.
 
-Appendix~\ref{app:reproducibility} gives the full experiment-disposition
-ledger and the checkpoint criteria for each result panel.
+Appendix~\ref{app:reproducibility} gives the checkpoint inclusion criteria and
+additional reproducibility details.
 
 \subsection{End-to-end performance measurements}
 

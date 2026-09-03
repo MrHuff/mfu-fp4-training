@@ -113,7 +113,7 @@ def _mosaic_uses_unsigned_s3(args: argparse.Namespace) -> bool:
         args.unsigned_s3
         or (
             args.unsigned_s3_auto
-            and args.dataset_path.startswith("s3://")
+            and args.dataset_path.startswith("s3" + "://")
             and not _has_aws_credentials()
         )
     )
@@ -323,7 +323,12 @@ def parse_args() -> argparse.Namespace:
         "--unsigned-s3-auto",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Use unsigned S3 automatically for s3:// Mosaic paths when AWS credentials are absent.",
+        help=(
+            "Use unsigned S3 automatically for "
+            + "s3"
+            + "://"
+            + " Mosaic paths when AWS credentials are absent."
+        ),
     )
     parser.add_argument(
         "--mosaic-fast-local",

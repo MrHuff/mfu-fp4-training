@@ -21,6 +21,9 @@ settings, public route labels, and content hashes; they do not serialize
 credentials, storage locations, scheduler identities, or checkpoint object
 inventories. Result directories are create-only and checksum sealed.
 
-The exact corrected r23 scaled-RoPE lm-eval wrapper is kept separately at
+The release entry point for corrected scaled-RoPE lm-eval is
+`scripts/evaluation/run_canonical_lm_eval.py`; it supports the flattened
+vendored TorchTitan source and checks its paired commit markers. The original
+r23 evaluator source is retained at
 `tools/r23_scaledrope/run_canonical_lm_eval.py` with SHA-256
 `48827b0f2bb1cb263e6ff5b1d851ce3cd45bd472d87554a86771076b74409466`.

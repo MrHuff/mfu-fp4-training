@@ -116,11 +116,8 @@ def _fp4_root_candidates() -> list[str]:
     if env_root:
         roots.append(os.path.abspath(env_root))
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    roots.append(os.path.join(repo_root, "fp4_runtime"))
     roots.append(os.path.abspath(os.path.join(repo_root, "..", "fp4_matmul")))
-    roots.extend([
-        "/opt/mfu/EXTERNAL_PATH",
-        "/opt/mfu/EXTERNAL_PATH",
-    ])
     deduped = []
     seen = set()
     for root in roots:

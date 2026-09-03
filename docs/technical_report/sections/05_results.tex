@@ -135,10 +135,16 @@ the lowest observed validation NLL, 2.422804. BF16 records 2.430206, the TE
 route with four final BF16 blocks 2.437475, and TE-native 2.440488. The
 fixed-H32 operand hybrid records 2.463842, compared with 2.460331 for
 \localcta{} and 2.462074 for global \nvfp{} v5. Relative to BF16, the
-\mxfp{}-H32, four-final-BF16-block, and operand-H32 differences are
+relative NLL differences $100(L_{\mathrm{route}}-L_{\mathrm{BF16}})/L_{\mathrm{BF16}}$
+for \mxfp{}-H32, four-final-BF16-block, and operand-H32 are
 $-0.305\%$, $+0.299\%$, and $+1.384\%$, respectively. These are observed
 single-trajectory comparisons, not a one-factor isolation of H32 or
 repeated-seed estimates.
+
+The 27/5 depth hybrid contributes one terminal exact checkpoint, at step
+38,000. Its validation NLL is 2.538116, or 4.440\% higher than matched BF16.
+No earlier exact checkpoint is available for this route, so we report the one
+measured point without constructing an intermediate curve.
 
 \begin{figure}[tbp]
   \centering
@@ -148,7 +154,8 @@ repeated-seed estimates.
   reports $100(L_{\mathrm{BF16}}-L_{\mathrm{route}})/L_{\mathrm{BF16}}$ at
   exact shared steps, so negative values are worse than BF16. Lines connect
   measured checkpoints only; missing checkpoints are neither interpolated nor
-  extrapolated.}
+  extrapolated. The 27/5 depth hybrid contributes only its terminal step-38,000
+  marker.}
   \label{fig:llama8b-validation}
 \end{figure}
 

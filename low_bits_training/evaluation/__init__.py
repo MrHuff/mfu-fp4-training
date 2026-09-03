@@ -180,7 +180,7 @@ class OlmesEval(EvaluationBase):
         # in particular, you need to make sure that multiple processes don't create runs with the same name at the same time.
         run = wandb_eval_init(job_config, "olmes")
         # Define a step metric to visualise results in an order different from the upload order
-        # https://docs.EXPERIMENT_TRACKER_RUN
+        # https://docs.wandb.ai/guides/track/log/customize-logging-axes/
         run.define_metric("evaluation/step")
         run.define_metric("evaluation/*", step_metric="evaluation/step")
         # Load the metrics_all.jsonl each line has a task_name string and metrics dict which need to be logged

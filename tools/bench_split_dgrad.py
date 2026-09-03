@@ -5,17 +5,40 @@ Direct kernel-level benchmark — constructs properly-formatted per-group
 weight tensors (matching real training layout) and benchmarks the full
 quant → GEMM → sum3 pipeline with split ON vs OFF.
 """
-import os, sys, time
+import importlib.util
+import os
+from pathlib import Path
+import sys
+import sysconfig
+import time
+
 os.environ['USE_TK_GEMM'] = '1'
 os.environ['USE_TK_QUANT'] = '1'
 
 import torch
 
-sys.path.insert(0, '/opt/mfu/EXTERNAL_PATH')
+_repo_root = Path(__file__).resolve().parents[1]
+_runtime_root = Path(
+    os.environ.get("FP4_RUNTIME_ROOT", _repo_root / "fp4_runtime")
+).expanduser().resolve()
+_v5_dir = Path(
+    os.environ.get("NVFP4_V5_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v5")
+).expanduser().resolve()
+_gemm_dir = Path(
+    os.environ.get(
+        "NVFP4_GEMM_BUILD_DIR",
+        _runtime_root / "ThunderKittens" / "kernels" / "gemm" / "nvfp4_b200",
+    )
+).expanduser().resolve()
+sys.path.insert(0, str(_v5_dir))
 import _tk_quant_v5 as tkq
 
-import importlib.util
-_so = '/opt/mfu/EXTERNAL_PATH'
+_so = Path(
+    os.environ.get(
+        "NVFP4_GEMM_EXTENSION",
+        _gemm_dir / f"_C{sysconfig.get_config_var('EXT_SUFFIX') or '.so'}",
+    )
+).expanduser().resolve()
 _old = sys.modules.pop('_C', None)
 spec = importlib.util.spec_from_file_location('_C', _so)
 tk = importlib.util.module_from_spec(spec)

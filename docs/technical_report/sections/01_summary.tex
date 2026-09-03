@@ -33,10 +33,14 @@ This report makes three contributions:
   \item Native, format-specific execution paths that fuse scale production,
         physical layouts, and saved backward state. The fastest custom path
         reaches 37.9K tokens/s/GPU in the common compiled-CE probe.
-  \item Contraction-specific recipes that combine orientation-consistent 2D
-        weights, row-only gradient SR, and paired fixed-sign Hadamard
-        preconditioning with the scale domain of each format.
+  \item A contraction-specific integration of established numerical tools:
+        ordinary adjacent-bin SR only on the row-facing Dgrad input, one
+        transpose-consistent 2D weight encoding emitted in both consumer
+        layouts, and paired fixed-sign H16/H32 preconditioning only for Wgrad.
+        The contribution is this placement and fused realization, not a new
+        rounding rule, 2D scale definition, or Hadamard transform.
   \item A 160B-token comparison of pure and hybrid routes, supported by
         same-state operator analysis, checkpoint-matched validation, and
-        downstream evaluation.
+        downstream evaluation. Appendix~\ref{app:code-release} links the
+        public code, pinned kernel sources, recipes, and figure builders.
 \end{itemize}

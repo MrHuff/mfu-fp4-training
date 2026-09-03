@@ -171,7 +171,7 @@ IDENTITY_RULES: tuple[tuple[str, re.Pattern[bytes]], ...] = (
     (
         "private_host_path",
         re.compile(
-            rb"(?<![A-Za-z0-9_])/(?:workspace|volt|Users|data|mnt|private/tmp)/"
+            rb"(?<![A-Za-z0-9_}])/(?:workspace|volt|Users|data|mnt|private/tmp)/"
         ),
     ),
     (
@@ -191,7 +191,8 @@ IDENTITY_RULES: tuple[tuple[str, re.Pattern[bytes]], ...] = (
     (
         "wandb_identity",
         re.compile(
-            rb"(?i)(?:wandb\.ai/[^\s/\"\x27<>]+/[^\s\"\x27<>]+|"
+            rb"(?i)(?:(?<![A-Za-z0-9_.-])wandb\.ai/"
+            rb"[^\s/\"\x27<>]+/[^\s\"\x27<>]+|"
             rb"WANDB_(?:ENTITY|PROJECT|NAME|RUN_ID|GROUP)[\x20\t]*="
             rb"[\x20\t]*[\"\x27]?(?!\$|<|REPLACE)[A-Za-z0-9_.-]+)"
         ),
@@ -209,7 +210,7 @@ IDENTITY_RULES: tuple[tuple[str, re.Pattern[bytes]], ...] = (
         "static_job_or_run_identity",
         re.compile(
             rb"(?i)(?:job[_-]?(?:id|name)|run[_-]?id|owner[_-]?uid)"
-            rb"[\x20\t\"\x27]*[:=][\x20\t\"\x27]+"
+            rb"[\x20\t\"\x27]*[:=][\x20\t]*[\"\x27]"
             rb"(?!\$|<|REPLACE|EXAMPLE|None\b|null\b)[A-Za-z0-9][A-Za-z0-9_.-]{7,}"
         ),
     ),
@@ -218,20 +219,22 @@ IDENTITY_RULES: tuple[tuple[str, re.Pattern[bytes]], ...] = (
 
 
 SANITIZE_PRIVATE_HOST = re.compile(
-    rb"(?<![A-Za-z0-9_])/(?:workspace|volt|Users|data|mnt|private/tmp)/"
+    rb"(?<![A-Za-z0-9_}])/(?:workspace|volt|Users|data|mnt|private/tmp)/"
     rb"[^\s\"\x27<>(){}\[\],;`]*"
 )
 SANITIZE_PRIVATE_HOME = re.compile(
     rb"(?<![A-Za-z0-9_])/"
     + rb"home/(?!USER(?:/|\b)|<)[^/\s]+/[^\s\"\x27<>(){}\[\],;`]*"
 )
-SANITIZE_STORAGE_URI = re.compile(rb"(?i)(?:s3|gs|abfs|az|azure)://[^\s\"\x27<>]+")
+SANITIZE_STORAGE_URI = re.compile(
+    rb"(?i)(?:s3|gs|abfs|az|azure)://[^\s\"\x27<>(){}\[\],;`]+"
+)
 SANITIZE_OBJECT_STORE_HTTPS = re.compile(
     rb"(?i)https?://[^\s/\"\x27<>]*\.s3"
     rb"[^\s\"\x27<>(){}\[\],;`]*"
 )
 SANITIZE_WANDB_URL = re.compile(
-    rb"(?i)wandb\.ai/[^\s/\"\x27<>]+/"
+    rb"(?i)(?<![A-Za-z0-9_.-])wandb\.ai/[^\s/\"\x27<>]+/"
     rb"[^\s\"\x27<>(){}\[\],;`]+"
 )
 SANITIZE_WANDB_ASSIGNMENT = re.compile(
@@ -246,7 +249,7 @@ SANITIZE_UUID_ASSIGNMENT = re.compile(
 )
 SANITIZE_STATIC_ID_ASSIGNMENT = re.compile(
     rb"(?i)((?:job[_-]?(?:id|name)|run[_-]?id|owner[_-]?uid)"
-    rb"[\x20\t\"\x27]*[:=][\x20\t\"\x27]+)"
+    rb"[\x20\t\"\x27]*[:=][\x20\t]*[\"\x27])"
     rb"(?!\$|<|REPLACE|EXAMPLE|None\b|null\b)[A-Za-z0-9][A-Za-z0-9_.-]{7,}"
 )
 
@@ -382,7 +385,8 @@ def _sanitize_identity_text(data: bytes) -> tuple[bytes, dict[str, int]]:
         data,
         rule="private_host_path",
         pattern=SANITIZE_PRIVATE_HOST,
-        replacement=b"/opt/mfu/EXTERNAL_PATH",
+        replacement=lambda match: b"/opt/mfu/EXTERNAL_PATH"
+        + (b"/" if match.group(0).endswith(b"/") else b""),
     )
     data = replace(
         data,
@@ -1493,6 +1497,38 @@ def verify_export_tree(root: Path, allow_blocked: bool = False) -> list[Finding]
         findings.add(Finding("component_inventory_invalid", str(COMPONENT_INVENTORY)))
     else:
         try:
+            allowlisted: dict[str, str] = {}
+            for item in inventory.get("binary_allowlist", []):
+                relative = item["path"]
+                digest = item["sha256"]
+                _safe_relative(relative)
+                if relative in allowlisted:
+                    findings.add(Finding("duplicate_binary_allowlist_entry", relative))
+                allowlisted[relative] = digest
+                if (
+                    not isinstance(digest, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                    or ledger.get(relative) != digest
+                ):
+                    findings.add(Finding("binary_allowlist_digest_mismatch", relative))
+
+            assets: dict[str, str] = {}
+            for item in inventory.get("binary_assets", []):
+                relative = item["path"]
+                digest = item["sha256"]
+                _safe_relative(relative)
+                if relative in assets:
+                    findings.add(Finding("duplicate_binary_asset_entry", relative))
+                assets[relative] = digest
+                if (
+                    not isinstance(digest, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                    or ledger.get(relative) != digest
+                ):
+                    findings.add(Finding("binary_asset_digest_mismatch", relative))
+            for relative in set(allowlisted) ^ set(assets):
+                findings.add(Finding("binary_inventory_membership_mismatch", relative))
+
             sanitized_seen: set[str] = set()
             for item in inventory.get("text_sanitizations", []):
                 relative = item["path"]

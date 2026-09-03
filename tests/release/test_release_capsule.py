@@ -99,15 +99,21 @@ def test_withheld_invalid_route_cannot_launch_or_resume() -> None:
     assert "route_not_executable" in rules
 
 
-def test_manifest_has_no_release_seal_or_exact_replay_claim() -> None:
+def test_manifest_records_public_release_boundary_without_exact_replay_claim() -> None:
     manifest = json.loads((ROOT / "release" / "capsule_manifest.json").read_text())
     recipes = json.loads(
         (ROOT / "configs" / "paper" / "llama8b_160b_recipe_contracts.json").read_text()
     )
 
-    assert manifest["status"] == "blocked_staging_not_public"
-    assert manifest["publication"]["release_commit"] is None
-    assert manifest["publication"]["release_tree"] is None
+    assert manifest["status"] == "published_clean_export"
+    assert manifest["publication"]["release_commit"] == (
+        "1f7b1b1d206e4779dd977771833e0736c8ef4f79"
+    )
+    assert manifest["publication"]["release_tree"] == (
+        "c55184b1b914676faa7633e2ba245dc61f83e675"
+    )
+    assert manifest["publication"]["release_tag"] == "v0.1.0"
+    assert not manifest["publication"]["must_not_publish_current_history"]
     assert not any(
         route["reproduction_level"] == "exact_replay_ready"
         for route in recipes["routes"]

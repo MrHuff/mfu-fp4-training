@@ -35,7 +35,7 @@ SEED="${SEED:-1234}"
 OUT_DIR="${OUT_DIR:-/tmp/lbt_slimpajama_mosaic_screen_${STEPS}_gpu${GPU}_$(date +%Y%m%d_%H%M%S)}"
 
 DATASET_NAME="${DATASET_NAME:-mosaic/cerebras___slim_pajama-627_b}"
-DATASET_PATH="${DATASET_PATH:-OBJECT_STORE_URI"
+DATASET_PATH="${DATASET_PATH:-OBJECT_STORE_URI}"
 CACHE_DIR="${CACHE_DIR:-/tmp/lbt_mosaic_cache/cerebras_slim_pajama_627b_small_shards}"
 MOSAIC_NUM_WORKERS="${MOSAIC_NUM_WORKERS:-8}"
 MOSAIC_SHUFFLE="${MOSAIC_SHUFFLE:-false}"

@@ -447,19 +447,13 @@ def _fp4_matmul_roots():
     sibling_roots = sorted(glob.glob(os.path.join(repo_root, "..", "fp4_matmul*")))
     candidates = [
         env_root,
+        os.path.normpath(os.path.join(repo_root, "fp4_runtime")),
         os.path.normpath(os.path.join(repo_root, "..", "cce", "fp4_matmul")),
         os.path.normpath(os.path.join(repo_root, "..", "fp4_matmul")),
         os.path.normpath(sibling_peer),
     ]
     candidates.extend(os.path.normpath(path) for path in sibling_roots)
-    candidates.extend([
-        "/opt/mfu/EXTERNAL_PATH",
-        "/opt/mfu/EXTERNAL_PATH",
-        "/tmp/fp4_matmul_v4_pcache",
-        "/opt/mfu/EXTERNAL_PATH",
-        "/opt/mfu/EXTERNAL_PATH",
-        "/opt/mfu/EXTERNAL_PATH",
-    ])
+    candidates.append("/tmp/fp4_matmul_v4_pcache")
     out = []
     seen = set()
     for candidate in candidates:

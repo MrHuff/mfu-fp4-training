@@ -27,7 +27,10 @@ import torch
 
 logger = logging.getLogger(__name__)
 
-_LEGACY_FP4_MATMUL_ROOT = "/opt/mfu/EXTERNAL_PATH"
+_PROJECT_ROOT = os.path.normpath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+)
+_LEGACY_FP4_MATMUL_ROOT = os.path.join(_PROJECT_ROOT, "fp4_runtime")
 
 _backend_trace_once: set[str] = set()
 _last_qkv_backward_debug_payload = None
@@ -305,6 +308,7 @@ def _fp4_matmul_root() -> str:
         )
     )
     candidates = [
+        os.path.join(_PROJECT_ROOT, "fp4_runtime"),
         os.path.join(base_dir, "fp4_matmul"),
         os.path.join(base_dir, "fp4_matmul-54-debug"),
     ]
@@ -2072,14 +2076,14 @@ def _get_tk():
                 fp4_root,
                 'ThunderKittens', 'kernels', 'gemm', 'nvfp4_b200', localcta_gemm_dir,
             )
-            alt_tk_dir = f'/opt/mfu/EXTERNAL_PATH{localcta_gemm_dir}'
+            alt_tk_dir = tk_dir
         else:
             fp4_root = _fp4_matmul_root()
             tk_dir = os.path.join(
                 fp4_root,
                 'ThunderKittens', 'kernels', 'gemm', 'nvfp4_b200',
             )
-            alt_tk_dir = '/opt/mfu/EXTERNAL_PATH'
+            alt_tk_dir = tk_dir
             extension_name = '_C'
 
         so_path = None
@@ -3431,7 +3435,7 @@ def _get_tk_plain():
             fp4_root,
             'ThunderKittens', 'kernels', 'gemm', 'nvfp4_b200',
         )
-        alt_tk_dir = '/opt/mfu/EXTERNAL_PATH'
+        alt_tk_dir = tk_dir
         candidate_names = [
             *_extension_candidate_names('_C'),
             *_extension_candidate_names('_C_nv_gemm'),
@@ -3586,7 +3590,7 @@ def _get_tk_localcta_direct():
             fp4_root,
             'ThunderKittens', 'kernels', 'gemm', 'nvfp4_b200', localcta_gemm_dir,
         )
-        alt_tk_dir = f'/opt/mfu/EXTERNAL_PATH{localcta_gemm_dir}'
+        alt_tk_dir = tk_dir
 
         so_path = _find_extension_in_dirs(so_name, [tk_dir, alt_tk_dir])
         if so_path is None:

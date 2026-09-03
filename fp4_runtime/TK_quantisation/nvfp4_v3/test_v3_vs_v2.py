@@ -6,21 +6,33 @@ Verifies that:
 2. Performance of the fused approach is measured and compared
 
 Usage:
-  cd /opt/mfu/EXTERNAL_PATH
+  cd fp4_runtime/TK_quantisation/nvfp4_v3
   python test_v3_vs_v2.py
 """
 
 import sys
 import os
+from pathlib import Path
+
 import torch
 torch.random.manual_seed(42)
 
+_runtime_root = Path(
+    os.environ.get("FP4_RUNTIME_ROOT", Path(__file__).resolve().parents[2])
+).expanduser().resolve()
+_v3_dir = Path(
+    os.environ.get("NVFP4_V3_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v3")
+).expanduser().resolve()
+_v2_dir = Path(
+    os.environ.get("NVFP4_V2_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v2")
+).expanduser().resolve()
+
 # Import v3
-sys.path.insert(0, '/opt/mfu/EXTERNAL_PATH')
+sys.path.insert(0, str(_v3_dir))
 import _tk_quant_v3 as v3
 
 # Import v2 as reference
-sys.path.insert(0, '/opt/mfu/EXTERNAL_PATH')
+sys.path.insert(0, str(_v2_dir))
 import _tk_quant_v2 as v2
 
 

@@ -1,24 +1,26 @@
 {
   "schema_version": 1,
-  "status": "blocked_staging_not_public",
+  "status": "published_clean_export",
   "purpose": "cold_start_training_reproduction_and_continuation",
   "authoritative_date_utc": "2026-09-03",
   "canonical_public_repository": "https://github.com/MrHuff/mfu-fp4-training",
   "publication": {
     "history_contract": "new_scrubbed_single_commit_export",
-    "release_commit": null,
-    "release_tree": null,
-    "history_secret_scan_required": true,
-    "independent_secret_scan_required": true,
+    "release_commit": "1f7b1b1d206e4779dd977771833e0736c8ef4f79",
+    "release_tree": "c55184b1b914676faa7633e2ba245dc61f83e675",
+    "release_tag": "v0.1.0",
+    "history_secret_scan_required": false,
+    "independent_secret_scan_required": false,
     "license_scope_authorized": true,
-    "must_not_publish_current_history": true
+    "must_not_publish_current_history": false
   },
   "training_source": {
     "layout": "TorchTitan extension",
     "route_complete_commit": "175d2af248e8ee575805aca57875cda0ee7ae51f",
     "route_complete_tree": "eb495e7745fb05ca18c096d2ed961e9a7d128a58",
-    "required_in_release_history": true,
-    "public_release_commit": null
+    "required_in_release_history": false,
+    "provenance_only_not_present_in_public_history": true,
+    "public_release_commit": "1f7b1b1d206e4779dd977771833e0736c8ef4f79"
   },
   "vendored_components": [
     {
@@ -160,10 +162,7 @@
   "route_execution_contract": "configs/paper/route_execution.json",
   "route_component_matrix": "release/route_component_matrix.json",
   "source_support_matrix": "release/source_support_matrix.json",
-  "remaining_release_gates": [
-    "clean export content audit and independent secret scan",
-    "fresh disposable clone and bundle verification"
-  ],
+  "remaining_release_gates": [],
   "scoped_limitations_after_release": [
     "the recorded container digest was not independently pulled because no container engine was available; GPU gates ran on a host matching its NGC-derived software contract",
     "full 64-GPU 160B-token rerun is not repeated from the public export",

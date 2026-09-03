@@ -21,6 +21,10 @@ _BRIDGE_FP4_WORKSPACES: dict[tuple[str, int | None, int], torch.Tensor] = {}
 _BRIDGE_WRAPPER_TIMING_COUNTS: dict[tuple[str, int | None, int], int] = {}
 
 
+def _bundled_fp4_runtime_root() -> str:
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fp4_runtime"))
+
+
 def _current_device() -> torch.device:
     if torch.cuda.is_available():
         return torch.device("cuda", torch.cuda.current_device())
@@ -1841,17 +1845,18 @@ def fp4_bridge_env(fp4_backend: str) -> dict[str, str]:
         env["LBT_BRIDGE_FP4_CCE_BACKEND"] = env["LBT_BRIDGE_FP4_MIXED_CCE_BACKEND"]
         return env
     if backend == "mxfp4":
+        runtime_root = _bundled_fp4_runtime_root()
         return {
             "FP4_MXFP4_ROOT": os.environ.get(
-                "FP4_MXFP4_ROOT", "/opt/mfu/EXTERNAL_PATH"
+                "FP4_MXFP4_ROOT", runtime_root
             ),
             "FP4_MATMUL_GEMM_ROOT": os.environ.get(
                 "FP4_MATMUL_GEMM_ROOT",
-                "/opt/mfu/EXTERNAL_PATH",
+                runtime_root,
             ),
             "FP4_CCE_TK_ROOT": os.environ.get(
                 "FP4_CCE_TK_ROOT",
-                "/opt/mfu/EXTERNAL_PATH",
+                runtime_root,
             ),
             "LBT_BRIDGE_FP4_CCE_BACKEND": os.environ.get(
                 "LBT_BRIDGE_FP4_CCE_BACKEND", "mxfp4"
@@ -1954,6 +1959,7 @@ def fp4_bridge_env(fp4_backend: str) -> dict[str, str]:
             ),
         }
 
+    runtime_root = _bundled_fp4_runtime_root()
     env = {
         **noextras,
         "USE_TK_GEMM": "1",
@@ -1964,7 +1970,7 @@ def fp4_bridge_env(fp4_backend: str) -> dict[str, str]:
         "FP4_FFN_BACKEND": "tk",
         "FP4_CCE_TK_ROOT": os.environ.get(
             "FP4_CCE_TK_ROOT",
-            "/opt/mfu/EXTERNAL_PATH",
+            runtime_root,
         ),
         "LBT_BRIDGE_FP4_CCE_BACKEND": os.environ.get(
             "LBT_BRIDGE_FP4_CCE_BACKEND", "nvfp4"

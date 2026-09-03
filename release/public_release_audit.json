@@ -45,6 +45,7 @@
     "tests/cpu/test_remote_synchronizer.py": 1,
     "tests/diagnose_*.py": 1,
     "tests/gpu/test_checkpoints_gpu.py": 1,
+    "tests/release/test_public_release_audit.py": 1,
     "tests/test_promote_pure_v5_b200_r4.py": 1,
     "tools/public_release_audit.py": 1,
     "tools/run_mxfp4_highwater_?8s.sh": 1,
@@ -57,18 +58,12 @@
   "release_blockers": [],
   "safe_content_status": "pass",
   "sanitized_file_counts_by_rule": {
-    "private_host_path": 53,
+    "private_host_path": 52,
     "static_job_or_run_identity": 9,
     "storage_uri": 5,
     "wandb_identity": 2
   },
   "sanitized_paths": [
-    {
-      "path": "FP4Dockerfile",
-      "rules": [
-        "private_host_path"
-      ]
-    },
     {
       "path": "TransformerEngine/transformer_engine/pytorch/custom_recipes/quantization_custom_format.py",
       "rules": [

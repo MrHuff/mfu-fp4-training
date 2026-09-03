@@ -15,6 +15,7 @@ from torch.nn.attention import SDPBackend, sdpa_kernel
 
 
 os.environ["LBT_LIGHT_IMPORT"] = "1"
+sys.dont_write_bytecode = True
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -37,19 +38,38 @@ def _pinned_frequencies(torchtitan_root: Path) -> torch.Tensor:
     if validate_torchtitan_gitlink_marker(root) != PINNED_TORCHTITAN_COMMIT:
         raise RuntimeError("canonical evaluator TorchTitan commit drift")
     sys.path.insert(0, str(root))
+    from torchtitan.models.llama3.model.args import RoPEScalingArgs
     from torchtitan.models.llama3.model.model import precompute_freqs_cis
 
     resolved = Path(sys.modules[precompute_freqs_cis.__module__].__file__).resolve()
     if root not in resolved.parents:
         raise RuntimeError("canonical evaluator imported TorchTitan outside pin")
+    scaling = RoPEScalingArgs(
+        scaling_factor=8.0,
+        low_freq_factor=1.0,
+        high_freq_factor=4.0,
+        original_max_position_embeddings=8192,
+    )
+    if scaling != RoPEScalingArgs():
+        raise RuntimeError("pinned Llama-3.1 8B RoPE defaults drift")
     frequencies = precompute_freqs_cis(
+        dim=128,
+        end=8192,
+        theta=500000.0,
+        scaling_args=scaling,
+    )
+    no_scaling = precompute_freqs_cis(
         dim=128,
         end=8192,
         theta=500000.0,
         scaling_args=None,
     )
-    if frequencies.shape != (8192, 64) or frequencies.dtype is not torch.complex64:
-        raise RuntimeError("canonical evaluator frequency contract drift")
+    if (
+        frequencies.shape != (8192, 64)
+        or frequencies.dtype is not torch.complex64
+        or torch.equal(frequencies, no_scaling)
+    ):
+        raise RuntimeError("scaled canonical evaluator frequency contract drift")
     return frequencies
 
 
@@ -82,7 +102,8 @@ def main() -> None:
     original_argv = sys.argv
     sys.argv = ["lm_eval", *forwarded]
     print(
-        "[CANONICAL LM-EVAL START] semantics=torchtitan-rope-rmsnorm "
+        "[CANONICAL LM-EVAL START] semantics=torchtitan-llama31-8b-"
+        "scaled-rope-rmsnorm rope_theta=500000 rope_scaling=8,1,4,8192 "
         "attention=math dtype=bfloat16 stock_hf_computed=0",
         flush=True,
     )
@@ -95,7 +116,11 @@ def main() -> None:
             cli_evaluate()
     finally:
         sys.argv = original_argv
-    print("[CANONICAL LM-EVAL COMPLETE] stock_hf_computed=0", flush=True)
+    print(
+        "[CANONICAL LM-EVAL COMPLETE] semantics=torchtitan-llama31-8b-"
+        "scaled-rope-rmsnorm stock_hf_computed=0",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

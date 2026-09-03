@@ -37,24 +37,40 @@ Community License and attribution under `LICENSES/`.
    scripts/release/bootstrap.sh --verify-only
    ```
 
-2. Enter the digest-pinned container and verify its recorded dependency
-   contract:
+2. Build the training image. Both container files use the exact NGC digest
+   recorded in `release/container_dependency_lock.json`; `FP4Dockerfile` is a
+   compatibility filename with the same base and setup path.
 
    ```bash
-   scripts/release/bootstrap.sh
+   docker build --pull --file Dockerfile --tag mfu-fp4:25.10 .
    ```
 
-   The source contract is container-anchored: it does not pretend that PyPI
-   packages reproduce NVIDIA's image-baked PyTorch/CUDA stack. The doctor fails
-   closed on a version mismatch.
+   Pulling from NGC can require registry authentication, which must be supplied
+   through the container client and is never copied into this repository. The
+   build performs no `apt`, `curl`, or PyPI dependency resolution. It verifies
+   the image-baked Python/CUDA contract, builds the custom Transformer Engine
+   wheel from the vendored source in a temporary directory with package indexes
+   disabled, installs that wheel without dependencies, and verifies its version
+   and custom-format source bytes. The training integration itself runs from
+   `/opt/mfu` through the fixed `PYTHONPATH`; the public tree has no root Python
+   packaging manifest, so the image does not pretend to install one.
 
-3. Build the production kernels and run the source contracts:
+3. Start the image with an SM100 GPU, then build the six production runtime
+   extensions and run the source and numerical contracts:
 
    ```bash
+   docker run --rm --gpus all --interactive --tty mfu-fp4:25.10
+   scripts/release/bootstrap.sh
    scripts/release/build_kernels.sh
    scripts/release/run_gates.sh --cpu-only
    scripts/release/run_gpu_gates.sh
    ```
+
+   The container defaults to `/bin/bash` in `/opt/mfu`. Runtime kernels are
+   deliberately built after start because their ABI gate requires an attached
+   SM100 GPU; the Docker build does not claim GPU access. The source contract is
+   container-anchored: similarly named PyPI wheels do not reproduce NVIDIA's
+   image-baked PyTorch/CUDA ABI, and bootstrap fails closed on any mismatch.
 
    The GPU command imports all six production extensions, compares the
    MXFP4-v4 and NVFP4-v5 GEMMs with BF16 at fixed inputs and thresholds, and
@@ -142,6 +158,13 @@ scripts/release/install_evaluation_extra.sh /absolute/path/to/eval-venv
   run --help
 ```
 
+The wrapper enforces the Llama-3.1 training-time scaled-RoPE parameters
+$(8,1,4,8192)$, TorchTitan RMSNorm semantics, BF16 inference, and the math
+attention backend. A standalone TorchTitan checkout must be clean at the pinned
+commit. The flattened vendored source is bound by paired commit markers plus the
+sealed component and whole-tree file ledgers, rather than inherited nested Git
+metadata.
+
 `release/evaluation_environment.json` records the task, shot, metric, seed,
 dtype, sequence-length, and TorchTitan semantic contract. The overlay's source
 archives and wheels are SHA-256 locked in
@@ -153,7 +176,12 @@ Inputs that cannot be redistributed are represented only by a local binding
 schema. Reproduction therefore has three distinct levels: source and numerical
 contract tests, miniature functional replay with user-supplied local inputs,
 and full-scale training/evaluation with the paper geometry. Do not interpret a
-passed CPU gate as a full GPU or distributed reproduction.
+passed CPU gate as a full GPU or distributed reproduction. The release supports
+fresh controlled execution of routes marked `current_release_route`, but no
+historical long-run route is labeled bit-exact replay-ready. Recreating a
+historical trajectory would additionally require its exact external data order,
+compatible checkpoint state where applicable, and any historical pin that the
+recipe ledger records as unrecovered.
 
 ## Development and release integrity
 
@@ -162,17 +190,22 @@ run `git submodule update`; the bootstrap and doctor verify their content
 against the export ledger instead. If a dependency changes, update its explicit
 pin, rebuild the clean export, and review the new license inventory and audit.
 
-The source archive is built from an explicit allowlist into a new one-commit
-history. Generated scheduler objects, profiler output, compiled extensions,
-logs, private operational notes, and local experiment state must remain outside
-the repository.
+The original publication boundary was built from an explicit allowlist into a
+new one-commit history. Generated scheduler objects, profiler output, compiled
+extensions, logs, private operational notes, and local experiment state must
+remain outside the repository.
 
-Before publishing a generated Git bundle, verify it from a disposable clone:
+For a subsequent release from this flattened public history, first regenerate
+and review the ledgers and audit in a clean commit, then build a self-contained
+snapshot:
 
 ```bash
-scripts/release/verify_public_bundle.sh /path/to/mfu-fp4-training.bundle
+python scripts/release/build_public_snapshot.py \
+  --output ../mfu-fp4-public-snapshot
 ```
 
-This checks the one-commit/no-gitlink contract, clean-export integrity,
-vendored-source bootstrap, CPU/source gates, the report build, and both the
-arXiv and Overleaf source packages without modifying the sealed export.
+The command extracts tracked `HEAD`, requires strict clean-export verification,
+creates a deterministic source archive and one-root/no-gitlink bundle, and then
+invokes `verify_public_bundle.sh` against a disposable clone. That cold check
+covers vendored-source bootstrap, CPU/source gates, the report build, and both
+the arXiv and Overleaf source packages without modifying the sealed export.

@@ -1,0 +1,15 @@
+.git
+.git/**
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+.env
+.env.*
+**/.env
+**/.env.*
+external_inputs.local.json
+release/external_inputs.local.json
+wandb/
+**/wandb/
+outputs*/

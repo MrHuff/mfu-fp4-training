@@ -25,6 +25,13 @@ projection, QKV into attention, the gated feed-forward network (FFN), and the
 residual update into the next RMSNorm. Each has a corresponding backward
 boundary.
 
+Fusion itself is established systems practice. The contribution here is the
+FP4 boundary contract: a producer completes the format's scale domain, emits
+both physical orientations needed by Fprop, Dgrad, and Wgrad, and retains the
+BF16 and random state required by autograd. Those obligations differ across
+MXFP4, global NVFP4, and CTA-local NVFP4, so one generic quantize--GEMM fusion
+schedule cannot represent all three paths.
+
 \subsection{What is fused in a Llama block}
 
 The system presents four execution panels in
@@ -107,7 +114,7 @@ by the completed \mxfp{}+row-SR+fixed-H32 route. Neither variant transforms the
 stored weight. Fprop, CTA-local Dgrad, weight encodings, row SR, output
 projection, and loss retain the same numerical contract. Table~\ref{tab:gb200-throughput}
 reports the two complete configurations; Appendix~\ref{app:implementation}
-gives the exact sign mapping.
+gives the sign construction.
 
 Every main custom route retains a BF16 output projection and compiled regular cross
 entropy. Appendix~\ref{app:output-head} summarizes the low-precision output

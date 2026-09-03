@@ -72,7 +72,12 @@ def test_gpu_receipt_is_path_free_and_matches_executable_thresholds() -> None:
 
 
 def test_environment_contract_records_the_verification_boundary() -> None:
-    environment = json.loads((ROOT / "release/public/environment.json").read_text())
+    environment_path = ROOT / "release/environment.json"
+    if not environment_path.is_file():
+        # Staging keeps the overlay below release/public; the flattened
+        # release installs it at release/environment.json.
+        environment_path = ROOT / "release/public/environment.json"
+    environment = json.loads(environment_path.read_text())
     lock_path = ROOT / environment["dependency_lock"]["path"]
     lock = json.loads(lock_path.read_text())
 

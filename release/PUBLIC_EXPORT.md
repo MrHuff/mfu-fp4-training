@@ -1,9 +1,10 @@
 # Clean public export
 
-`tools/public_clean_export.py` creates the publication boundary. It reads only
-tracked Git objects at explicit commits and copies only paths selected by
-`release/public_export_manifest.json`. It does not copy a working directory or
-reuse the repository's historical object graph.
+`tools/public_clean_export.py` created the original publication boundary from
+the private development source. It reads only tracked Git objects at explicit
+commits and copies only paths selected by `release/public_export_manifest.json`.
+It does not copy a working directory or reuse the source repository's historical
+object graph.
 
 The output contains:
 
@@ -40,6 +41,23 @@ credential-bearing URLs, mutable dependency refs, or missing exact commits.
 `--repo-map URL=LOCAL_GIT_REPOSITORY` and `--offline` are intended for an
 audited local mirror or deterministic tests. A local mirror proves object
 availability, not public anonymous availability.
+
+That original manifest retains private-source ancestry and overlay provenance;
+it is not the command for publishing a descendant of the flattened public
+history. For a subsequent public release, first regenerate and review the
+component inventory, audit, and `SHA256SUMS` in a clean public commit and repeat
+the independent secret scan. Then run:
+
+```bash
+python scripts/release/build_public_snapshot.py \
+  --output ../mfu-fp4-public-snapshot
+```
+
+The self-hosted builder refuses a dirty checkout, extracts only tracked `HEAD`,
+runs strict clean-export verification, creates a deterministic tarball and a
+cloneable one-root/no-gitlink bundle, and invokes
+`scripts/release/verify_public_bundle.sh` before exposing the completed output.
+It does not depend on private gitlinks or the original staging overlays.
 
 Verify a materialized tree without Git metadata:
 
@@ -84,10 +102,14 @@ and unlisted files. It reports paths and rule names, never matched values.
   image digest. The receipt therefore does not label the matching-host run as
   a cold-container run. It also does not claim a repeated distributed
   64-GPU/160B-token trajectory.
-- Before publication, the clean candidate still requires an independent
-  secret scan and disposable-clone bundle verification.
-- The development history is not publishable. Only the new one-commit bundle
-  or deterministic source archive may cross the publication boundary.
+- The original public boundary passed an independent secret scan and
+  disposable-clone bundle verification before publication as `v0.1.0`.
+  Subsequent releases must repeat both checks against their final tracked
+  trees.
+- Private development history is not publishable. The original clean export and
+  subsequent public snapshots rebuild bundles and source archives from the
+  final scrubbed tracked tree with a new root commit; the public repository may
+  retain only reviewed, public-safe changes descended from that boundary.
 
 `--allow-release-blockers` may be used only to create a quarantined candidate
 while a named technical gate is pending. Such an artifact must not be

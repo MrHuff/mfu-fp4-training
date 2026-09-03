@@ -216,7 +216,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "step": args.expected_step,
         "ntokens_seen": args.expected_ntokens_seen,
         "checkpoint_metadata_sha256": args.expected_metadata_sha256,
-        "source_job_id": EXAMPLE,
+        "source_job_id": args.expected_source_job_id,
         "source_uri_sha256": args.expected_source_uri_sha256,
         "fixed_token_ids": token_ids,
         "fixed_token_ids_sha256": token_ids_sha256(token_ids),

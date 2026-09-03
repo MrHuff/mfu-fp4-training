@@ -41,6 +41,11 @@
       "root": "fp4_runtime/fp4_cce_TK",
       "scope": "minimal TK Python stack and four v4 CUDA sources",
       "reason": "negative-result low-precision output-head reference; ordinary compiled BF16 cross entropy is used by supported paper routes and this archival stack is not built by the release entrypoint"
+    },
+    {
+      "root": "low_bits_training/quantization/v7_fused_linear.py",
+      "scope": "historical V7 fused-linear experiment with paired sources under fp4_runtime/fused_ops/csrc/old_ideas",
+      "reason": "retained for development continuity; it is not built by the release entrypoint and is not a supported paper execution path"
     }
   ],
   "external_optional_not_redistributed": [],

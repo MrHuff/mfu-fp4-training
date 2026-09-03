@@ -415,7 +415,7 @@ def convert(
         manifest = {
             "schema_version": 1,
             "converter_sha256": sha256(Path(__file__).resolve()),
-            "source_job_id": EXAMPLE,
+            "source_job_id": source_job_id,
             "source_uri_sha256": source_uri_sha256,
             "checkpoint_metadata_sha256": sha256(checkpoint / ".metadata"),
             "route": validation.route,

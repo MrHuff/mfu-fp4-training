@@ -15,6 +15,7 @@ pre-allocated in __init__ and reused across forward calls to eliminate Python ov
 """
 
 import math
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -32,12 +33,36 @@ def get_v7():
     global _v7_ext
     if _v7_ext is None:
         from torch.utils.cpp_extension import load
-        CSRC = '/opt/mfu/EXTERNAL_PATH'
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        CSRC = os.path.abspath(
+            os.environ.get(
+                "FP4_V7_CSRC",
+                os.path.join(
+                    repo_root, "fp4_runtime", "fused_ops", "csrc", "old_ideas"
+                ),
+            )
+        )
+        sources = [
+            os.path.join(CSRC, "fused_te_quant_v7_torch.cpp"),
+            os.path.join(CSRC, "fused_te_quant_v7.cu"),
+        ]
+        include_root = os.path.dirname(CSRC)
+        required = sources + [
+            os.path.join(include_root, "vec.cuh"),
+            os.path.join(include_root, "utils.cuh"),
+        ]
+        missing = [path for path in required if not os.path.isfile(path)]
+        if missing:
+            raise RuntimeError(
+                "V7 fused-linear CUDA sources are unavailable; set FP4_V7_CSRC "
+                "to a directory containing fused_te_quant_v7_torch.cpp and "
+                "fused_te_quant_v7.cu"
+            )
         FL = ['-std=c++20', '-O3', '--expt-relaxed-constexpr',
               '-gencode=arch=compute_100a,code=sm_100a']
         _v7_ext = load(name='fused_te_quant_v7_linear',
-            sources=[CSRC+'/fused_te_quant_v7_torch.cpp', CSRC+'/fused_te_quant_v7.cu'],
-            extra_include_paths=[CSRC], extra_cuda_cflags=FL, verbose=False)
+            sources=sources,
+            extra_include_paths=[CSRC, include_root], extra_cuda_cflags=FL, verbose=False)
     return _v7_ext
 
 

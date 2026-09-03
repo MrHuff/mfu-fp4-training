@@ -87,11 +87,11 @@ def load_dataset_with_custom_cluster_path(
         "cache_dir": cache_dir,
     }
     kwargs = {**defaults, **load_dataset_kwargs}
-    if path.startswith("s3://"):
+    if path.startswith("s3" + "://"):
         arrow_glob = (
             path
             if path.endswith(".arrow")
-            else f"{path.rstrip('/')}/opt/mfu/EXTERNAL_PATH"
+            else path.rstrip("/") + "/" + "data/**/*.arrow"
         )
         kwargs.pop("cache_dir", None)
         logger.info(

@@ -1,10 +1,13 @@
 # Reproducibility guide
 
 The release separates source-controlled scientific contracts from external
-model and dataset bytes. It contains all project code, kernel integrations,
-evaluation logic, report inputs, and dependency pins needed to continue the
-work. It does not contain credentials, private storage locations, checkpoint
-bytes, or checkpoint metadata.
+model and dataset bytes. It contains the public training integration, vendored
+kernels, evaluation logic, report inputs, and dependency pins needed to run the
+supported current-release routes and continue their development. Historical
+recipes and numerical evidence are also included, but the release does not
+claim bit-exact replay of every historical trajectory. It does not contain
+credentials, private storage locations, dataset or tokenizer objects,
+checkpoint bytes, or checkpoint metadata.
 
 ## Source identity
 
@@ -28,16 +31,37 @@ The report is independently rebuildable from its public inputs:
 
 ```bash
 cd docs/technical_report
-sha256sum -c data/SHA256SUMS
+(cd data && sha256sum -c SHA256SUMS)
 make
 make arxiv-source
 ```
 
-The figure builders fail closed on row counts, route/step grids, numerical
-geometry, and hashes. The committed PDF is a convenience copy; generated
-figures and tables remain derivable from the CSV inputs. `make arxiv-source`
-also emits a matching Overleaf ZIP with `main.tex` at its root and verifies a
-clean PDFLaTeX build with shell escape disabled.
+Entries in `data/SHA256SUMS` are relative to the data directory, which is why
+the checksum command runs in that directory. The figure builders fail closed
+on row counts, route/step grids, numerical geometry, and hashes. The release
+PDF is a convenience copy; generated figures and tables remain derivable from
+the CSV inputs. `make arxiv-source` also emits a matching Overleaf ZIP with
+`main.tex` at its root and verifies a clean PDFLaTeX build with shell escape
+disabled.
+
+## Training-route scope
+
+`configs/paper/route_execution.json` distinguishes supported
+`current_release_route` entries from controlled reconstructions, recorded
+legacy recipes, and an invalid withheld route. A supported current-release
+route can be launched as a fresh controlled run after the source and GPU gates
+pass and the user supplies hash-bound tokenizer and dataset inputs through
+`release/external_inputs.schema.json`. A full-state continuation additionally
+requires a compatible user-supplied checkpoint binding.
+
+That capability is not a claim that the released code will recreate the exact
+historical bit stream. The historical recipe ledger records whether a route has
+a known lineage or only a recipe; none is labeled `exact_replay_ready`.
+Historical dataset order, unavailable old code pins, or private checkpoint
+state remain external where the ledger says they were not recovered. A fresh
+run made from a supported current route therefore receives a new experiment
+identity. Published training histories are immutable numerical evidence, not
+substitutes for the omitted training inputs or checkpoints.
 
 ## Fixed-independent validation
 
@@ -70,11 +94,15 @@ The numerical path is:
 
 ## Downstream evaluation
 
-`tools/r23_scaledrope/run_canonical_lm_eval.py` is the exact corrected
-scaled-RoPE wrapper used for the published panel. Its SHA-256 is
+`scripts/evaluation/run_canonical_lm_eval.py` is the release entry point for
+the corrected scaled-RoPE evaluator used by the published panel. The wrapper
+requires a clean pinned TorchTitan checkout or binds the flattened vendored
+source through paired commit markers and the sealed component/file ledgers. It
+also pins Transformers, lm-eval, TorchTitan RMSNorm, the Llama-3.1 training-time
+RoPE scaling $(8,1,4,8192)$, and the math attention backend.
+`tools/r23_scaledrope/run_canonical_lm_eval.py` retains the original evaluator
+source used to produce the result ledger; its SHA-256 is
 `48827b0f2bb1cb263e6ff5b1d851ce3cd45bd472d87554a86771076b74409466`.
-The wrapper pins TorchTitan semantics, transformers, lm-eval, RMSNorm, RoPE,
-and the math attention backend.
 
 The r25 collector consumes local route directories containing `metrics.json`,
 `canonical-parity.json`, and `SHA256SUMS`. It validates the four shot/metric

@@ -79,11 +79,17 @@ profiles, or logs. Bind authorized local data and checkpoints through
 `release/external_inputs.schema.json`, keeping the completed binding outside
 the checkout.
 
-Before publishing a release bundle, run its verifier from a disposable clone:
+After regenerating and reviewing `SHA256SUMS`, the component inventory, and the
+public audit in a clean commit, build the subsequent public snapshot with:
 
 ```bash
-scripts/release/verify_public_bundle.sh /path/to/mfu-fp4-training.bundle
+python scripts/release/build_public_snapshot.py \
+  --output ../mfu-fp4-public-snapshot
 ```
+
+This command verifies the tracked public tree and runs the resulting one-root
+bundle through the disposable-clone verifier. Repeat the independent secret
+scan against the same final commit before publication.
 
 Pull requests should describe the numerical or systems change, the exact gates
 run, and any compatibility or reproduction limitation.

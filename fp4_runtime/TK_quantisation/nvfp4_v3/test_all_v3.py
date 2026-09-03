@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 """Test v3 fused amax kernels (all 4 functions) vs v2 reference."""
 
+import os
+from pathlib import Path
 import sys
-sys.path.insert(0, "/opt/mfu/EXTERNAL_PATH")
-sys.path.insert(0, "/opt/mfu/EXTERNAL_PATH")
 
 import torch
-import importlib.util
 
-def load_module(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+_runtime_root = Path(
+    os.environ.get("FP4_RUNTIME_ROOT", Path(__file__).resolve().parents[2])
+).expanduser().resolve()
+_v2_dir = Path(
+    os.environ.get("NVFP4_V2_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v2")
+).expanduser().resolve()
+_v3_dir = Path(
+    os.environ.get("NVFP4_V3_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v3")
+).expanduser().resolve()
+sys.path.insert(0, str(_v2_dir))
+sys.path.insert(0, str(_v3_dir))
 
 print("Loading v2 …")
-v2 = load_module("_tk_quant", "/opt/mfu/EXTERNAL_PATH")
+import _tk_quant_v2 as v2
 print("Loading v3 …")
-v3 = load_module("_tk_quant_v3", "/opt/mfu/EXTERNAL_PATH")
+import _tk_quant_v3 as v3
 
 device = "cuda"
 torch.manual_seed(42)

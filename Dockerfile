@@ -1,38 +1,24 @@
-# Start from the full-featured PyTorch image. This guarantees that all
-# system libraries are compatible with the installed Python environment.
-FROM nvcr.io/nvidia/pytorch:25.05-py3
+# syntax=docker/dockerfile:1
+# The tag is retained for readability; the digest is the immutable contract in
+# release/container_dependency_lock.json.
+FROM nvcr.io/nvidia/pytorch:25.10-py3@sha256:42263b2424fc237b34c4fc4a91c30d603c57eed36e37d31ff6d9a4f1f801edee
 
-WORKDIR /app
+ENV CUDA_HOME=/usr/local/cuda \
+    MAX_JOBS=2 \
+    NVTE_CUDA_ARCHS=100a \
+    NVTE_FRAMEWORK=pytorch \
+    NVTE_SKIP_SUBMODULE_CHECKS_DURING_BUILD=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/opt/mfu:/opt/mfu/torchtitan_submodule
 
-# Copy the full project context. This is necessary for the next step
-# to correctly install dependencies from your pyproject.toml file.
-# Using a .dockerignore file is highly recommended to keep this small.
-COPY . .
+WORKDIR /opt/mfu
+COPY . /opt/mfu
 
-# RUN a single, multi-line command to perform all setup and cleanup.
-# This creates only one layer, making the image smaller.
-RUN apt-get update && \
-    # Install build tools
-    apt-get install -y --no-install-recommends python3-pip && \
-    pip install --no-cache-dir uv && \
-    \
-    # Create the virtual environment
-    uv venv .venv && \
-    . .venv/bin/activate && \
-    # Explicitly install pip and setuptools into the new venv
-    uv pip install --no-cache-dir pip setuptools && \
-    # Now install the project's dependencies using pyproject.toml
-    # This installs dependencies without installing the project itself in editable mode.
-    uv pip install --no-cache-dir . && \
-    \
-    # --- Aggressive Cleanup ---
-    # Remove all package manager caches to shrink the image
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    uv cache clean && \
-    rm -rf /root/.cache && \
-    # Remove the copied source code to keep the final image as a runtime-only environment
-    rm -rf /app/*
+# The NGC image supplies the recorded Python/CUDA toolchain.  Bootstrap uses
+# only the vendored Transformer Engine source and disables package indexes,
+# dependency resolution, and build isolation.  FP4 runtime kernels are built
+# after container start because their ABI gate requires an attached SM100 GPU.
+RUN scripts/release/bootstrap.sh --install-vendored
 
-# The image is now a self-contained runtime environment with an empty /app directory,
-# ready for your code to be mounted.
+CMD ["/bin/bash"]

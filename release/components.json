@@ -14,11 +14,11 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_downstream_delta_bf16.png",
-      "sha256": "768587a71f5bf5c8613232dd891ea3887c057b5b02ea77755ca134d2e9a56c76"
+      "sha256": "3fc72ab720f1ed6c4e68c398168a1b53d44766e7c667be37bbc9a75c0b6319a3"
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "bfbd838ea0a96cc250705c99709de9153e56d90eae588b0d54570f2bf73f779c"
+      "sha256": "fc0be26c3d307b8f1d48a598d062446ada560209e5f32d2ea8c004d67c5caa36"
     },
     {
       "path": "docs/technical_report/figures/fp4_fusion_dataflow.png",
@@ -37,16 +37,20 @@
       "sha256": "e5534139e61b019205c5a5a125a4ca285c06fd4c747a1a2355e30ca6faa6696e"
     },
     {
+      "path": "docs/technical_report/figures/fp4_qkv_ffn_fusion_schedule.pdf",
+      "sha256": "706279b1bcd08cbeffdb7f8ac9f1e4e04741f30b17c70b2991f8217cb44ba575"
+    },
+    {
       "path": "docs/technical_report/figures/fp4_recipe_cost_ledger.png",
       "sha256": "b15589a6db766f92188acbadbebcf2c2f3c1fa376a802502d4013c500ae29efe"
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss.png",
-      "sha256": "98c73a7ac7ed3d737176d3e86fbdd5b86f5803af65f14093377e6c0635a0f8e3"
+      "sha256": "c4917c5e8301a1623764a8784b032b43088f4594099237b530f7ac26c49c9e73"
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png",
-      "sha256": "5c0b53dc9194b62282b630536399d2801ba98a0b2c60ca6d524befd1e6400d2e"
+      "sha256": "c6aef7cfb096ca4834fc60ba8f5ce7275adb2471438ccaa741e8f0e8d9ce3f1e"
     },
     {
       "path": "docs/technical_report/figures/llama8b_validation_nll.png",
@@ -71,12 +75,12 @@
     },
     {
       "path": "docs/technical_report/figures/fp4_downstream_delta_bf16.png",
-      "sha256": "768587a71f5bf5c8613232dd891ea3887c057b5b02ea77755ca134d2e9a56c76",
+      "sha256": "3fc72ab720f1ed6c4e68c398168a1b53d44766e7c667be37bbc9a75c0b6319a3",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/fp4_format_execution_routes.png",
-      "sha256": "bfbd838ea0a96cc250705c99709de9153e56d90eae588b0d54570f2bf73f779c",
+      "sha256": "fc0be26c3d307b8f1d48a598d062446ada560209e5f32d2ea8c004d67c5caa36",
       "source_component": "."
     },
     {
@@ -100,18 +104,23 @@
       "source_component": "."
     },
     {
+      "path": "docs/technical_report/figures/fp4_qkv_ffn_fusion_schedule.pdf",
+      "sha256": "706279b1bcd08cbeffdb7f8ac9f1e4e04741f30b17c70b2991f8217cb44ba575",
+      "source_component": "."
+    },
+    {
       "path": "docs/technical_report/figures/fp4_recipe_cost_ledger.png",
       "sha256": "b15589a6db766f92188acbadbebcf2c2f3c1fa376a802502d4013c500ae29efe",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss.png",
-      "sha256": "98c73a7ac7ed3d737176d3e86fbdd5b86f5803af65f14093377e6c0635a0f8e3",
+      "sha256": "c4917c5e8301a1623764a8784b032b43088f4594099237b530f7ac26c49c9e73",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png",
-      "sha256": "5c0b53dc9194b62282b630536399d2801ba98a0b2c60ca6d524befd1e6400d2e",
+      "sha256": "c6aef7cfb096ca4834fc60ba8f5ce7275adb2471438ccaa741e8f0e8d9ce3f1e",
       "source_component": "."
     },
     {
@@ -125,8 +134,8 @@
       "attribution_files": [],
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
-      "file_count": 578,
-      "file_ledger_sha256": "6a881c82120a1ae1b5b21e1d04b12d95be22cbb8c8c8e69f693e52aadf831098",
+      "file_count": 586,
+      "file_ledger_sha256": "96619ea02de2fbd84131184a3da386953fc33a7542980b0455c6d87125c37db2",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [
@@ -270,8 +279,8 @@
       "attribution_files": [],
       "commit": "301ab63d354a4f8c24b7c0da499736e3f14b7400",
       "declared_release_gate": null,
-      "file_count": 253,
-      "file_ledger_sha256": "11340fcd562269a52eee130ad673755aea0e9440a5efe4acd27b9f6b30e82d37",
+      "file_count": 255,
+      "file_ledger_sha256": "4300933f6ab11517d8bb1004f0bdfaee81f13f33169dd372342171bbf178faa7",
       "git_tree": "903fc604ec0c419a30351c609a056698fc8d3684",
       "id": "fp4_runtime",
       "license_files": [
@@ -294,7 +303,7 @@
       "commit": "2dd00a943309984ab7c1434a5614f2a63efd933d",
       "declared_release_gate": null,
       "file_count": 249,
-      "file_ledger_sha256": "509ef7a51d215ad20bbea91942935aa2163fa655f8f424c834851a05eadb3722",
+      "file_ledger_sha256": "51bd2bbb759ad47a5355f515121a19eb8d5b3fa45b051cf375a4c555d17d2bd9",
       "git_tree": "dfbdf45212f1234bc56e1a2250b0628f2952222d",
       "id": "fp4_runtime:ThunderKittens",
       "license_files": [
@@ -316,8 +325,8 @@
       "attribution_files": [],
       "commit": "20b3de7585696c327bd5aa9f9627f0300abdbf9d",
       "declared_release_gate": null,
-      "file_count": 265,
-      "file_ledger_sha256": "4777996efef044be6cd416c40a73296429f42545a0d5acfe6a8816f3fe7f3197",
+      "file_count": 266,
+      "file_ledger_sha256": "6c763d2517b13e4464c0721bf265926ae4a9b509fee7d2275ceacc2ba9132eda",
       "git_tree": "4464fcc17914b0253cdf761e39997afddfdf40f5",
       "id": "torchtitan",
       "license_files": [
@@ -359,27 +368,19 @@
   "source_git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
   "source_rewrites": [
     {
-      "output_sha256": "eaad2969ef41d728ef852c39170a0eae67a2ff3db76e330e04bd7d454f91c7eb",
+      "output_sha256": "d823abfad144777e9f2dbe1569dbc184e672d5c961b13e6437d9a43aede84019",
       "path": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue/bench_qkv_split3_onepass.py",
       "rule": "portable_torch_extensions_path",
       "source_sha256": "e066a8d6f7e30a61e348c90278e2571c4949df0dcbd317f2ccffe3797a16eae7"
     },
     {
-      "output_sha256": "eaad2969ef41d728ef852c39170a0eae67a2ff3db76e330e04bd7d454f91c7eb",
+      "output_sha256": "d823abfad144777e9f2dbe1569dbc184e672d5c961b13e6437d9a43aede84019",
       "path": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue_v3/bench_qkv_split3_onepass.py",
       "rule": "portable_torch_extensions_path",
       "source_sha256": "e066a8d6f7e30a61e348c90278e2571c4949df0dcbd317f2ccffe3797a16eae7"
     }
   ],
   "text_sanitizations": [
-    {
-      "output_sha256": "301177dc981548e4c2040ec655919672e2a0ff4103e9793e72bbd042ddfd2bcb",
-      "path": "FP4Dockerfile",
-      "rules": [
-        "private_host_path"
-      ],
-      "source_sha256": "2bffe29510f8cdeb7255c369e0b479a3c926252fbd648f06f278fa7afe3c79de"
-    },
     {
       "output_sha256": "c125dfa2ec508e1ba69e6613a49c3894931b5a1e7edc6c9d59d76cdd1a3e20ae",
       "path": "TransformerEngine/transformer_engine/pytorch/custom_recipes/quantization_custom_format.py",
@@ -389,7 +390,7 @@
       "source_sha256": "44a4dea19855c60238ef60656318820686713f4c9125c52deb89a1577186955d"
     },
     {
-      "output_sha256": "04e1adf0bfaa5b2edd7aed6ce3bcedff9fb3f9795b7313a6c4c702c6c1fc6a01",
+      "output_sha256": "a956f8bec9d9f146143ee1e384333cf49fec51e6f9700ac8d9132c935138f826",
       "path": "fp4_runtime/TK_quantisation/nvfp4_v2/test_v2_vs_v1.py",
       "rules": [
         "private_host_path"
@@ -397,7 +398,7 @@
       "source_sha256": "6c71d967fd526227167cc7a1b016aae3f4a96c43e05c4dfa485a93cd35c0fa6e"
     },
     {
-      "output_sha256": "30cc11d1c122eb81f03281e3997b73b0ba205b295cde8d3bec8876ed378741ce",
+      "output_sha256": "38158d0f0b842285a5312d3595c5b77ba571178c00496fb293eddacf2dfc459d",
       "path": "fp4_runtime/TK_quantisation/nvfp4_v3/bench_v3_vs_v2.py",
       "rules": [
         "private_host_path"
@@ -405,7 +406,7 @@
       "source_sha256": "b473b178e7bdef8c15170bd9ceb035ddf5189e7afcb7557cafaea88192c16163"
     },
     {
-      "output_sha256": "6ecba12f95af25e7b8db2c422449f7c510c552f752241904079b2e9ff7792012",
+      "output_sha256": "9ee7337de480cab87a165de9071c3874c26c37dcc518bbf9ee973b3e8e38eb49",
       "path": "fp4_runtime/TK_quantisation/nvfp4_v3/test_all_v3.py",
       "rules": [
         "private_host_path"
@@ -413,7 +414,7 @@
       "source_sha256": "0b887675d3eff07725b860d6197c2a5d50b13db2d5e67f1a621fc92d99fcd15e"
     },
     {
-      "output_sha256": "60151efe9cc7597350bb7bbf2fd9ede862f29f3eba4d378d3fd802c86fc3180f",
+      "output_sha256": "4b89be7c0f6bb15157f3d145931b374ae383345bad03ad58590a5425cefa2d1e",
       "path": "fp4_runtime/TK_quantisation/nvfp4_v3/test_v3_gemm.py",
       "rules": [
         "private_host_path"
@@ -421,7 +422,7 @@
       "source_sha256": "c1ab8504bb0ba2bbab40dbf54d49b1cf11069bad603e24f4b2237b55386600f3"
     },
     {
-      "output_sha256": "1da5b69b1bff3ab6cefc45f9c3f8e169f7e9fb21181dad2ed53d6e38f4882d8b",
+      "output_sha256": "65a6f43c5d4a503ebcf04c2ae479cb86fb334f70893c32944475f94eb29e9244",
       "path": "fp4_runtime/TK_quantisation/nvfp4_v3/test_v3_vs_v2.py",
       "rules": [
         "private_host_path"
@@ -429,7 +430,7 @@
       "source_sha256": "4305c82a6ae0c671dd5f341f99e13790dacd95b146553e3330cbb61fa20b2191"
     },
     {
-      "output_sha256": "073c8f0590e5565c2c2eb44d01897bbf03eef565222161415895207857703381",
+      "output_sha256": "fd549fe4bae1f64b2ec411acc89ad897ae223b16056d36916bd47a5d4cb7f7f3",
       "path": "fp4_runtime/TK_quantisation/nvfp4_v5/test_split_dyn.py",
       "rules": [
         "private_host_path"
@@ -453,7 +454,7 @@
       "source_sha256": "345bf26eec30be9320a2900bec47ddbf34e8f28916d371fac8d7f0702f89b094"
     },
     {
-      "output_sha256": "11755dc220b7b2669b2705d17d1244c4612ecbab6a547dded2e262251cb9751d",
+      "output_sha256": "d823abfad144777e9f2dbe1569dbc184e672d5c961b13e6437d9a43aede84019",
       "path": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue/bench_qkv_split3_onepass.py",
       "rules": [
         "private_host_path"
@@ -461,7 +462,7 @@
       "source_sha256": "e066a8d6f7e30a61e348c90278e2571c4949df0dcbd317f2ccffe3797a16eae7"
     },
     {
-      "output_sha256": "11755dc220b7b2669b2705d17d1244c4612ecbab6a547dded2e262251cb9751d",
+      "output_sha256": "d823abfad144777e9f2dbe1569dbc184e672d5c961b13e6437d9a43aede84019",
       "path": "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue_v3/bench_qkv_split3_onepass.py",
       "rules": [
         "private_host_path"
@@ -485,7 +486,7 @@
       "source_sha256": "f9c7ec137af3d1dc7b0f35e914e08199bae738125cbc97384fb41de4ae5b5fbf"
     },
     {
-      "output_sha256": "615fcc372d7ae5671c79cc7a821a71efe67148065427e72461ce2703bf05fac6",
+      "output_sha256": "900f5ad53b00ca4f47a94633770c86c61b49316c771bfdb57c20259d57a4f0a5",
       "path": "low_bits_training/bridge_mcore_fp4.py",
       "rules": [
         "private_host_path"
@@ -493,7 +494,7 @@
       "source_sha256": "24f37b531ef1dadfa5677178b8f2b81eaf3200a5648a412573acfe7a1a2045ff"
     },
     {
-      "output_sha256": "607d254d8a4d519067135e55057065217f12fab2dde159fc4f6aa8bd5ee4e7ac",
+      "output_sha256": "13958a5cb3a43d4b7ec597348fc9603b17308c7d1beba98e4958099d521793e1",
       "path": "low_bits_training/cce/backend.py",
       "rules": [
         "private_host_path"
@@ -509,7 +510,7 @@
       "source_sha256": "107458335a3a4c4c1f5f9bda74fdb3b34fb224d9f87fdb1986f38b08daa44118"
     },
     {
-      "output_sha256": "cbcdd7c5a6fe4536561f10b4f5639e97ab11faf44e170e83467cf75e997495af",
+      "output_sha256": "c42b605344b92ec3b3f6b2af6576c8f17d73d18a8783ed55aacf47218a321504",
       "path": "low_bits_training/datasets/hf_datasets.py",
       "rules": [
         "private_host_path"
@@ -525,7 +526,7 @@
       "source_sha256": "c11547e194f757661cc9018019e6fa413635face841a4aa7e11a85b662a05c1f"
     },
     {
-      "output_sha256": "ffa00d8cda1cdca88231fb41eeec9983e12ea98eb691b20cc386eb8994a79b1f",
+      "output_sha256": "67067f400a3d4ac65160485014a28e13c175b77ee997e646a2548d3c1e6bd63c",
       "path": "low_bits_training/evaluation/__init__.py",
       "rules": [
         "private_host_path",
@@ -558,7 +559,7 @@
       "source_sha256": "f3e6b7181c5b03ca4f0fdcbb21724572aca862bfd4e5d2f058fc0c1312af0d95"
     },
     {
-      "output_sha256": "43eaad619e137fd741207e7d5459f70ec206248ea498118cb3808af1f891e8c6",
+      "output_sha256": "82a73742c5f815ef347a0df1207b4afcd3c69f9f70663f3893c1b2aa8d301c47",
       "path": "low_bits_training/quantization/mxfp4_backend.py",
       "rules": [
         "private_host_path"
@@ -566,7 +567,7 @@
       "source_sha256": "34d4677a4329376bdc1ef887ddaa9a5a87051fe0ac5efcbf9efc4d35ddd5ad89"
     },
     {
-      "output_sha256": "a1591fd527ffa2547eba8f72f7ff4fdabc44f712dd3d384fdaabafd1de59046c",
+      "output_sha256": "01d5658ce38f43b14af9db011708f58c89adc00ff7b444a17b2dc9eb63d83c49",
       "path": "low_bits_training/quantization/tk_gemm.py",
       "rules": [
         "private_host_path"
@@ -574,7 +575,7 @@
       "source_sha256": "0989ce39d3fa9a92d1997874a430676c4c85cb2380d17f9febc3a9b903a492c9"
     },
     {
-      "output_sha256": "a63e033b2db5aa79d1f76724bac9a050a1fb93f98e699d79034bd5f3c3a71769",
+      "output_sha256": "c0b5e7c9a3617b2404b23e905618621e4579b627e6b65b967033555334f6c8cf",
       "path": "low_bits_training/quantization/v7_fused_linear.py",
       "rules": [
         "private_host_path"
@@ -582,7 +583,7 @@
       "source_sha256": "7d5cb186b9aa42503610771cb6ded29101d681fe4ec45098bbe369913172cac3"
     },
     {
-      "output_sha256": "6a9487a7e6dbce6e0b24e6fa5dead485b54ad7892c2560d1769b6f39977fd000",
+      "output_sha256": "bedd9d838b137d8b5fe450cc5d0ae46f2b72503e1a803b1c1486691a9555b0a5",
       "path": "low_bits_training/utils.py",
       "rules": [
         "static_job_or_run_identity"
@@ -590,7 +591,7 @@
       "source_sha256": "bedd9d838b137d8b5fe450cc5d0ae46f2b72503e1a803b1c1486691a9555b0a5"
     },
     {
-      "output_sha256": "3bb2352c6e5ab229b33f4fb3fd0e43f95dcc0a223dc8e90037d86159a24330ba",
+      "output_sha256": "69da8e369939a3533e7a1ebd36f73e5a892c10236ab311ef6419748ed5d325c6",
       "path": "scripts/evaluation/convert_llama8b_dcp_to_hf.py",
       "rules": [
         "static_job_or_run_identity"
@@ -598,7 +599,7 @@
       "source_sha256": "69da8e369939a3533e7a1ebd36f73e5a892c10236ab311ef6419748ed5d325c6"
     },
     {
-      "output_sha256": "823abe515e5631c4980e64d29e6979bd7a73b0a9e2cfbca380f75520774a372c",
+      "output_sha256": "05d019df52a3a9ee1924f114caa5706e6eab9e068e269da7988ae71c30f1bd3f",
       "path": "scripts/evaluation/validate_llama8b_canonical_parity.py",
       "rules": [
         "static_job_or_run_identity"
@@ -606,7 +607,7 @@
       "source_sha256": "05d019df52a3a9ee1924f114caa5706e6eab9e068e269da7988ae71c30f1bd3f"
     },
     {
-      "output_sha256": "0ee3e648872172965e6d4d78c7a3464d481e7ffae338a2c55b41c39a510e2070",
+      "output_sha256": "b7b03998d7c042bcc47e1198cb7c2f0eba8dba87e8b8ff75ac490b108eb71281",
       "path": "scripts/evaluation/validate_llama8b_conversion_parity.py",
       "rules": [
         "static_job_or_run_identity"
@@ -702,7 +703,7 @@
       "source_sha256": "e10eff9d7f8ed4324256f7ac32c0afc517c446681d8547593a508c30523ab9ed"
     },
     {
-      "output_sha256": "bc92322418674df5ac86016da2ecf6913c2aa112ac37bc453b24b8ed5765f322",
+      "output_sha256": "a88c2f8d2e0e45c8f2fc49b6c2b9c1887fcae955c68c280cf4654e55a19d44ff",
       "path": "tools/bench_split_dgrad.py",
       "rules": [
         "private_host_path"
@@ -718,7 +719,7 @@
       "source_sha256": "d0e98ff5581d1f47014013235b5480b4134843f16db34dd65ece68a97e71a998"
     },
     {
-      "output_sha256": "4fe804992928685ab2ca1a2ab68b57274bc9df6e12c8a6a2fa897dc37c9ac76c",
+      "output_sha256": "24a8db1b228184a504d5e5bac546a3ebd0e24962b504182760feca712dfdf289",
       "path": "tools/build_packed_binary_dataset.py",
       "rules": [
         "storage_uri"
@@ -726,7 +727,7 @@
       "source_sha256": "18d4245c9f2baab47e5b92fed734309e1fad75a06d195432a8f4497ef2d0ca65"
     },
     {
-      "output_sha256": "9e7c176ed134372a9caf6c2b168ef4c9a561101d432c1a0b8fb2ef1e32883cad",
+      "output_sha256": "e2c22a585f843fed28f79eb6763ba80a53170abbc41e7c85616b0049c251b671",
       "path": "tools/build_slimpajama_packed_binary.sh",
       "rules": [
         "storage_uri"
@@ -870,7 +871,7 @@
       "source_sha256": "650abce31fb25c57358691ba000fd90fe03d0affa985b12f4104e54f8bc57c55"
     },
     {
-      "output_sha256": "d7f56f97960f764a6bc34aaa8c4a3cf3f28a85b7d5f48ca8de545468f8efc7dd",
+      "output_sha256": "6307f538e9b5f4c49d2cc254d06b6d76bd76b7806eee0c59c947cbe494007719",
       "path": "tools/run_slimpajama_mosaic_screen.sh",
       "rules": [
         "private_host_path",

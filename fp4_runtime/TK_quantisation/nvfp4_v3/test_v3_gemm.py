@@ -3,6 +3,11 @@ End-to-end test: v3 quantize → TK GEMM correctness and performance.
 Tests all 3 quant variants against v2 quantize → TK GEMM.
 """
 import sys, os, torch, time
+from pathlib import Path
+
+_runtime_root = Path(
+    os.environ.get("FP4_RUNTIME_ROOT", Path(__file__).resolve().parents[2])
+).expanduser().resolve()
 
 # Load v2 and v3 modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -20,9 +25,14 @@ else:
 import _tk_quant as v2
 
 # Load TK GEMM
-tk_dir = '/opt/mfu/EXTERNAL_PATH'
-if os.path.isdir(tk_dir):
-    sys.path.insert(0, tk_dir)
+tk_dir = Path(
+    os.environ.get(
+        "NVFP4_GEMM_BUILD_DIR",
+        _runtime_root / "ThunderKittens" / "kernels" / "gemm" / "nvfp4_b200",
+    )
+).expanduser().resolve()
+if tk_dir.is_dir():
+    sys.path.insert(0, str(tk_dir))
 from _C import nvfp4_gemm, nvfp4_grouped_gemm, nvfp4_grouped_k_gemm
 
 

@@ -16,7 +16,7 @@ contract is now split into three reviewable pieces:
 - `route_execution.json` binds a route ID to its converter order, environment,
   world size, local batch, gradient accumulation, and launch/resume policy.
 
-The release source includes the route-complete lineage through
+The release source includes the current supported-route lineage through
 `175d2af248e8ee575805aca57875cda0ee7ae51f` and pins the paired runtime at
 `301ab63d354a4f8c24b7c0da499736e3f14b7400`. Several recorded executions used
 other source/runtime commits or sealed overlays. The contract preserves those
@@ -33,6 +33,18 @@ The top-level `common_recipe` contains settings shared by the full-horizon
 campaign. Each route then records only route-specific format assignment,
 rounding/transform behavior, batch geometry, loss path, lineage, and evidence
 status.
+
+`execution_status` in `route_execution.json` means:
+
+- `current_release_route`: supported by the released source for a fresh
+  controlled run with user-supplied, hash-bound inputs. It is not automatically
+  a bit-exact replay of the historical trajectory.
+- `controlled_reproduction`: an executable reconstruction of the published
+  recipe for which historical topology, data order, or another exact execution
+  detail was not recovered.
+- `recorded_legacy_route`: retained as a historical recipe. A fresh run uses a
+  new identity, and resume is allowed only when the route entry says so.
+- `withheld_invalid`: non-runnable evidence retained to prevent accidental use.
 
 `reproduction_level` means:
 
@@ -52,8 +64,8 @@ nearby run without creating a new experiment identity.
 The repository deliberately contains no dataset objects, credentials,
 checkpoint bytes or metadata, private storage locations, or cluster jobs.
 Supply local authorized inputs using `release/external_inputs.schema.json`.
-The release launcher verifies their SHA-256 bindings and combines them with a
-route without printing their contents:
+For supported execution statuses, the release launcher verifies those SHA-256
+bindings and combines them with a route without printing their contents:
 
 ```bash
 scripts/release/run_recipe.sh \

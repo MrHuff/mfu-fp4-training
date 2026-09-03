@@ -425,7 +425,12 @@ def test_public_manifest_carries_curated_scope_and_resolved_license_map() -> Non
             "source": "release/public/fp4_runtime_LICENSE.txt",
             "destination": "fp4_runtime/LICENSE",
             "component": "fp4_runtime",
-        }
+        },
+        {
+            "source": "release/torchtitan_gitlink.txt",
+            "destination": "torchtitan_submodule/.lbt_torchtitan_commit",
+            "component": "torchtitan_submodule",
+        },
     ]
     notice = (ROOT / "THIRD_PARTY_NOTICES.md").read_text()
     assert "LICENSES/PYTORCH.txt" in notice
@@ -436,7 +441,11 @@ def test_public_manifest_carries_curated_scope_and_resolved_license_map() -> Non
     assert "were modified" in notice
 
     repository_notice = (ROOT / "NOTICE").read_text()
-    public_readme = (ROOT / "release/public/README.md").read_text()
+    public_readme_path = ROOT / "release/public/README.md"
+    if not public_readme_path.is_file():
+        # The clean export promotes this overlay to the repository root.
+        public_readme_path = ROOT / "README.md"
+    public_readme = public_readme_path.read_text()
     assert "Built with Meta Llama 3" in repository_notice
     assert "Built with Meta Llama 3" in public_readme
 
@@ -897,6 +906,99 @@ def test_explicit_text_sanitization_is_hash_bound_and_preserves_python_structure
     assert EXPORT.verify_export_tree(output / "source-tree") == []
 
 
+def test_identity_sanitization_preserves_generic_code_and_shell_delimiters(
+    tmp_path: Path,
+) -> None:
+    private_root = b"/" + b"work" + b"space/private-project/cache"
+    private_run = b"private-" + b"run-123"
+    arrow_suffix = b"/" + b"data/**/*.arrow"
+    python_source = (
+        b'ROOT = "' + private_root + b'"\n'
+        b'ALT = f"' + private_root + b'/{variant}"\n'
+        b'ARROW = f"{path.rstrip(chr(47))}' + arrow_suffix + b'"\n'
+        b'source_job_id = args.expected_source_job_id\n'
+        b'manifest = {"source_job_id": source_job_id}\n'
+        b'DOCS = "https://docs.wandb.ai/guides/track/log/customize-logging-axes/"\n'
+        b'JOB_NAME = "' + private_run + b'"\n'
+    )
+
+    sanitized, counts = EXPORT._sanitize_identity_text(python_source)
+
+    assert counts == {"private_host_path": 2, "static_job_or_run_identity": 1}
+    assert b'ROOT = "/opt/mfu/EXTERNAL_PATH"' in sanitized
+    assert b'ALT = f"/opt/mfu/EXTERNAL_PATH/{variant}"' in sanitized
+    assert arrow_suffix in sanitized
+    assert b'manifest = {"source_job_id": source_job_id}' in sanitized
+    assert b"https://docs.wandb.ai/" in sanitized
+    assert b'JOB_NAME = "EXAMPLE"' in sanitized
+    compile(sanitized, "<sanitized fixture>", "exec")
+    scan_root = tmp_path / "scan"
+    scan_root.mkdir()
+    (scan_root / "safe.py").write_bytes(sanitized)
+    assert EXPORT.audit_tree(scan_root) == []
+
+    object_store = b"s" + b"3://example.invalid/" + b"data/"
+    shell_source = b'DATASET_PATH="${DATASET_PATH:-' + object_store + b'}"\n'
+    sanitized_shell, shell_counts = EXPORT._sanitize_identity_text(shell_source)
+    assert shell_counts == {"storage_uri": 1}
+    assert sanitized_shell == b'DATASET_PATH="${DATASET_PATH:-OBJECT_STORE_URI}"\n'
+    shell_path = scan_root / "safe.sh"
+    shell_path.write_bytes(sanitized_shell)
+    subprocess.run(("bash", "-n", str(shell_path)), check=True)
+    assert EXPORT.audit_tree(scan_root) == []
+
+
+def test_public_core_runtime_defaults_use_the_vendored_tree() -> None:
+    core_paths = [
+        ROOT / "low_bits_training/bridge_mcore_fp4.py",
+        ROOT / "low_bits_training/cce/backend.py",
+        ROOT / "low_bits_training/quantization/mxfp4_backend.py",
+        ROOT / "low_bits_training/quantization/tk_gemm.py",
+    ]
+    for path in core_paths:
+        source = path.read_text()
+        assert "fp4_runtime" in source
+        assert "/opt/mfu/EXTERNAL_PATH" not in source
+    v7 = ROOT / "low_bits_training/quantization/v7_fused_linear.py"
+    v7_source = v7.read_text()
+    assert "FP4_V7_CSRC" in v7_source
+    assert "/opt/mfu/EXTERNAL_PATH" not in v7_source
+    for name in ("fused_te_quant_v7.cu", "fused_te_quant_v7_torch.cpp"):
+        assert (ROOT / "fp4_runtime/fused_ops/csrc/old_ideas" / name).is_file()
+    for name in ("vec.cuh", "utils.cuh"):
+        assert (ROOT / "fp4_runtime/fused_ops/csrc" / name).is_file()
+    assert "extra_include_paths=[CSRC, include_root]" in v7_source
+    manifest = json.loads((ROOT / "release/public_export_manifest.json").read_text())
+    runtime = next(item for item in manifest["components"] if item["id"] == "fp4_runtime")
+    assert "fused_ops/csrc/old_ideas/fused_te_quant_v7.cu" in runtime["include"]
+    assert "fused_ops/csrc/old_ideas/fused_te_quant_v7_torch.cpp" in runtime["include"]
+
+
+def test_archival_runtime_drivers_have_portable_configurable_roots() -> None:
+    paths = [
+        ROOT / "fp4_runtime/TK_quantisation/nvfp4_v2/test_v2_vs_v1.py",
+        ROOT / "fp4_runtime/TK_quantisation/nvfp4_v3/bench_v3_vs_v2.py",
+        ROOT / "fp4_runtime/TK_quantisation/nvfp4_v3/test_all_v3.py",
+        ROOT / "fp4_runtime/TK_quantisation/nvfp4_v3/test_v3_gemm.py",
+        ROOT / "fp4_runtime/TK_quantisation/nvfp4_v3/test_v3_vs_v2.py",
+        ROOT / "fp4_runtime/TK_quantisation/nvfp4_v5/test_split_dyn.py",
+        ROOT / "tools/bench_split_dgrad.py",
+        ROOT / "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue/bench_qkv_split3_onepass.py",
+        ROOT / "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200/localCTA_epilogue_v3/bench_qkv_split3_onepass.py",
+    ]
+    for path in paths:
+        source = path.read_text()
+        compile(source, str(path), "exec")
+        assert "EXTERNAL_PATH" not in source
+        assert "FP4_RUNTIME_ROOT" in source
+    assert (ROOT / "fp4_runtime/TK_quantisation/nvfp4_v2").is_dir()
+    assert (ROOT / "fp4_runtime/TK_quantisation/nvfp4_v3").is_dir()
+    assert (ROOT / "fp4_runtime/TK_quantisation/nvfp4_v5").is_dir()
+    assert (ROOT / "fp4_runtime/ThunderKittens/kernels/gemm/nvfp4_b200").is_dir()
+    assert (ROOT / "TransformerEngine/transformer_engine").is_dir()
+    assert (ROOT / "torchtitan_submodule/torchtitan").is_dir()
+
+
 def test_text_sanitization_never_masks_credentials(tmp_path: Path) -> None:
     source, source_commit, manifest, mapping = _fixture_graph(tmp_path)
     shaped_value = "ASIA" + "B" * 16
@@ -1042,6 +1144,57 @@ def test_explicit_paper_binary_is_hash_bound_and_other_binary_is_excluded(
         }
     ]
     assert EXPORT.verify_export_tree(tree) == []
+
+
+def test_verifier_rejects_stale_binary_inventory_digest(tmp_path: Path) -> None:
+    source, source_commit, manifest, mapping = _fixture_graph(tmp_path)
+    payload = b"\x89PNG\r\n\x1a\nfixture"
+    figure = source / "docs/technical_report/figures/result.png"
+    figure.parent.mkdir(parents=True)
+    figure.write_bytes(payload)
+    _git(source, "add", "docs/technical_report/figures/result.png")
+    _git(source, "commit", "-m", "paper figure fixture")
+    source_commit = _git(source, "rev-parse", "HEAD")
+    document = json.loads(manifest.read_text())
+    document["source"]["required_ancestor"] = source_commit
+    document["source"]["include"].append("docs/technical_report/figures/**")
+    document["policy"]["binary_allowlist"] = {
+        "docs/technical_report/figures/result.png": hashlib.sha256(payload).hexdigest()
+    }
+    document["policy"]["exclude"].append("**/*.png")
+    manifest.write_text(json.dumps(document))
+    output = tmp_path / "output"
+    EXPORT.build_export(
+        source_repo=source,
+        source_revision=source_commit,
+        manifest_path=manifest,
+        output=output,
+        cache=tmp_path / "cache",
+        repo_map=mapping,
+        offline=True,
+    )
+    tree = output / "source-tree"
+    inventory_path = tree / "release/components.json"
+    inventory = json.loads(inventory_path.read_text())
+    inventory["binary_allowlist"][0]["sha256"] = "0" * 64
+    inventory_path.write_text(json.dumps(inventory, indent=2, sort_keys=True) + "\n")
+
+    ledger_path = tree / "SHA256SUMS"
+    inventory_digest = hashlib.sha256(inventory_path.read_bytes()).hexdigest()
+    lines = ledger_path.read_text().splitlines()
+    lines = [
+        f"{inventory_digest}  release/components.json"
+        if line.endswith("  release/components.json")
+        else line
+        for line in lines
+    ]
+    ledger_path.write_text("\n".join(lines) + "\n")
+
+    findings = EXPORT.verify_export_tree(tree)
+    assert EXPORT.Finding(
+        "binary_allowlist_digest_mismatch",
+        "docs/technical_report/figures/result.png",
+    ) in findings
 
 
 def test_allowlisted_binary_mutation_is_rejected(tmp_path: Path) -> None:

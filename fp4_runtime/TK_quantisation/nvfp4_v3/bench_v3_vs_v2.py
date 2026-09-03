@@ -10,22 +10,38 @@ Tests:
   3. Grouped dim=0 quant + grouped GEMM
   4. Grouped dim=1 quant-only
 """
-import importlib.util, sys, os, torch, time
+import os
+from pathlib import Path
+import sys
+import time
 
-def load_module(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m
+import torch
 
 # Load modules
-v2 = load_module("_tk_quant",
-    "/opt/mfu/EXTERNAL_PATH")
-v3 = load_module("_tk_quant_v3",
-    "/opt/mfu/EXTERNAL_PATH")
+_runtime_root = Path(
+    os.environ.get("FP4_RUNTIME_ROOT", Path(__file__).resolve().parents[2])
+).expanduser().resolve()
+_v2_dir = Path(
+    os.environ.get("NVFP4_V2_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v2")
+).expanduser().resolve()
+_v3_dir = Path(
+    os.environ.get("NVFP4_V3_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v3")
+).expanduser().resolve()
+_gemm_dir = Path(
+    os.environ.get(
+        "NVFP4_GEMM_BUILD_DIR",
+        _runtime_root / "ThunderKittens" / "kernels" / "gemm" / "nvfp4_b200",
+    )
+).expanduser().resolve()
+
+sys.path.insert(0, str(_v2_dir))
+import _tk_quant_v2 as v2
+
+sys.path.insert(0, str(_v3_dir))
+import _tk_quant_v3 as v3
 
 # TK GEMM
-sys.path.insert(0, "/opt/mfu/EXTERNAL_PATH")
+sys.path.insert(0, str(_gemm_dir))
 from _C import nvfp4_gemm, nvfp4_grouped_gemm, nvfp4_grouped_k_gemm
 
 

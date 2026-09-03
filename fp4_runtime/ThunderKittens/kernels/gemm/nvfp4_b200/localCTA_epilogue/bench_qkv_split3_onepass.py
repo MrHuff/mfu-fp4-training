@@ -5,6 +5,7 @@ import os
 import signal
 import sys
 import types
+from pathlib import Path
 
 MODE = sys.argv[1]
 CONFIG_IDX = int(sys.argv[2]) if len(sys.argv) > 2 else -1
@@ -31,9 +32,22 @@ os.environ["USE_TK_LOCALCTA"] = "1" if BACKEND == "localcta" else "0"
 os.environ["USE_TK_LOCALCTA_FUSED"] = "0"
 os.environ["USE_TK_LOCALCTA_FUSED_DIRECT"] = "0"
 
-ROOT = "/opt/mfu/EXTERNAL_PATH"
+_runtime_root = Path(
+    os.environ.get("FP4_RUNTIME_ROOT", Path(__file__).resolve().parents[5])
+).expanduser().resolve()
+ROOT = str(
+    Path(os.environ.get("LOW_BITS_TRAINING_ROOT", _runtime_root.parent))
+    .expanduser()
+    .resolve()
+)
+torchtitan_root = str(
+    Path(os.environ.get("TORCHTITAN_ROOT", Path(ROOT) / "torchtitan_submodule"))
+    .expanduser()
+    .resolve()
+)
+os.environ.setdefault("FP4_MATMUL_ROOT", str(_runtime_root))
 sys.path.insert(0, ROOT)
-sys.path.insert(0, "/opt/mfu/EXTERNAL_PATH")
+sys.path.insert(0, torchtitan_root)
 
 pkg_root = os.path.join(ROOT, "low_bits_training")
 quant_root = os.path.join(pkg_root, "quantization")
@@ -66,7 +80,11 @@ if "low_bits_training.quantization.mxfp_custom_te_fp4" not in sys.modules:
     stub.BoundRecipeLinear = BoundRecipeLinear
     sys.modules["low_bits_training.quantization.mxfp_custom_te_fp4"] = stub
 
-te_root = "/opt/mfu/EXTERNAL_PATH"
+te_root = str(
+    Path(os.environ.get("TRANSFORMER_ENGINE_ROOT", Path(ROOT) / "TransformerEngine"))
+    .expanduser()
+    .resolve()
+)
 te_pkg = os.path.join(te_root, "transformer_engine")
 if os.path.isdir(te_pkg):
     _te.__path__ = [te_pkg]

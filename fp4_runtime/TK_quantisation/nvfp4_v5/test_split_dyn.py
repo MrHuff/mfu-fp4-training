@@ -1,10 +1,34 @@
 """Benchmark: row/col split with dynamic amax (no constant scale)."""
-import torch, sys, time
-sys.path.insert(0, '/opt/mfu/EXTERNAL_PATH')
+import importlib.util
+import os
+from pathlib import Path
+import sys
+import sysconfig
+import time
+
+import torch
+
+_runtime_root = Path(
+    os.environ.get("FP4_RUNTIME_ROOT", Path(__file__).resolve().parents[2])
+).expanduser().resolve()
+_v5_dir = Path(
+    os.environ.get("NVFP4_V5_BUILD_DIR", _runtime_root / "TK_quantisation" / "nvfp4_v5")
+).expanduser().resolve()
+_gemm_dir = Path(
+    os.environ.get(
+        "NVFP4_GEMM_BUILD_DIR",
+        _runtime_root / "ThunderKittens" / "kernels" / "gemm" / "nvfp4_b200",
+    )
+).expanduser().resolve()
+sys.path.insert(0, str(_v5_dir))
 import _tk_quant_v5 as tkq
 
-import importlib.util
-_gemm_so = '/opt/mfu/EXTERNAL_PATH'
+_gemm_so = Path(
+    os.environ.get(
+        "NVFP4_GEMM_EXTENSION",
+        _gemm_dir / f"_C{sysconfig.get_config_var('EXT_SUFFIX') or '.so'}",
+    )
+).expanduser().resolve()
 _old_c = sys.modules.pop('_C', None)
 spec = importlib.util.spec_from_file_location('_C', _gemm_so)
 tk_mod = importlib.util.module_from_spec(spec)

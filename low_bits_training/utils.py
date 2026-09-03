@@ -153,13 +153,13 @@ def wandb_init(job_config: JobConfig, project: str, entity: str):
     config_dict = job_config.to_dict()
 
     rank = os.environ["RANK"]
-    wb_training_run_id = EXAMPLE
+    wb_training_run_id = job_config.wandb.name
     wb_group_id = wandb_group(job_config)
     # Standardize naming of the run, based on training name and rank.
     wb_run_name = f"{wb_training_run_id}:rank_{rank}"
     # Additional metadata to record on W&B.
     config_dict["metadata"] = {
-        "training_run_id": EXAMPLE,
+        "training_run_id": wb_training_run_id,
         "rank": int(rank),
         "local_rank": int(os.environ["LOCAL_RANK"]),
         "world_size": int(os.environ["WORLD_SIZE"]),
@@ -187,13 +187,13 @@ def wandb_eval_init(
     """Initialize W&B for evaluation runs."""
     config_dict = job_config_to_config_dict(job_config)
 
-    wb_training_run_id = EXAMPLE
+    wb_training_run_id = job_config.wandb.name
     wb_group_id = wandb_group(job_config)
     # Standardize naming of the run, based on training name and rank.
     wb_run_name = f"{wb_training_run_id}:evaluation-{eval_name}"
     # Additional metadata to record on W&B.
     config_dict["metadata"] = {
-        "training_run_id": EXAMPLE,
+        "training_run_id": wb_training_run_id,
     }
     project = job_config.wandb.project
     if delete_previous:

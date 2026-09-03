@@ -1,14 +1,5 @@
 {
-  "schema_version": 1,
-  "status": "hash_locked_evaluation_overlay",
   "base_training_contract": "release/container_dependency_lock.json",
-  "platform": "Linux aarch64",
-  "python": "3.12.3",
-  "install_mode": "isolated virtual environment with system-site-packages; hash-locked overlay installed with --no-deps",
-  "requirements": {
-    "path": "release/evaluation_requirements.lock",
-    "sha256": "857303f78950636edc92da1c65e7374963e66b00ec8159d9cad8793b8409f07d"
-  },
   "canonical_direct_versions": {
     "accelerate": "1.7.0",
     "datasets": "3.6.0",
@@ -17,22 +8,54 @@
     "tokenizers": "0.21.1",
     "transformers": "4.48.2"
   },
-  "training_abi_invariants": {
-    "pytorch": "2.9.0a0+145a3a7bda.nv25.10",
-    "cuda": "13.0",
-    "must_not_be_reinstalled": ["torch", "triton", "nvidia-*", "cuda-*"]
-  },
   "canonical_protocol": {
-    "wrapper": "scripts/evaluation/run_canonical_lm_eval.py",
-    "tasks": {
-      "mmlu": {"shots": 5, "metric": "acc"},
-      "hellaswag": {"shots": 10, "metric": "acc_norm"},
-      "winogrande": {"shots": 5, "metric": "acc"},
-      "arc_challenge": {"shots": 25, "metric": "acc_norm"}
-    },
-    "seed": 42,
-    "model_dtype": "bfloat16",
     "max_length": 8192,
-    "semantics": "TorchTitan-scaled RoPE and RMSNorm"
+    "model_dtype": "bfloat16",
+    "seed": 42,
+    "semantics": "TorchTitan-scaled RoPE and RMSNorm",
+    "source_identity": {
+      "authority": "release/torchtitan_gitlink.txt",
+      "torchtitan_commit": "20b3de7585696c327bd5aa9f9627f0300abdbf9d",
+      "vendored_marker": "torchtitan_submodule/.lbt_torchtitan_commit"
+    },
+    "tasks": {
+      "arc_challenge": {
+        "metric": "acc_norm",
+        "shots": 25
+      },
+      "hellaswag": {
+        "metric": "acc_norm",
+        "shots": 10
+      },
+      "mmlu": {
+        "metric": "acc",
+        "shots": 5
+      },
+      "winogrande": {
+        "metric": "acc",
+        "shots": 5
+      }
+    },
+    "wrapper": "scripts/evaluation/run_canonical_lm_eval.py",
+    "wrapper_sha256": "0f173f913f2dfc95c2482f2f6faa58e54a34f9771b9be35f3e3397b42eb52857"
+  },
+  "install_mode": "isolated virtual environment with system-site-packages; hash-locked overlay installed with --no-deps",
+  "platform": "Linux aarch64",
+  "python": "3.12.3",
+  "requirements": {
+    "path": "release/evaluation_requirements.lock",
+    "sha256": "857303f78950636edc92da1c65e7374963e66b00ec8159d9cad8793b8409f07d"
+  },
+  "schema_version": 1,
+  "status": "hash_locked_evaluation_overlay",
+  "training_abi_invariants": {
+    "cuda": "13.0",
+    "must_not_be_reinstalled": [
+      "torch",
+      "triton",
+      "nvidia-*",
+      "cuda-*"
+    ],
+    "pytorch": "2.9.0a0+145a3a7bda.nv25.10"
   }
 }
