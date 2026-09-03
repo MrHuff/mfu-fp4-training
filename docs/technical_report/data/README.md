@@ -8,8 +8,13 @@ were removed for release.
 
 ## Training and performance inputs
 
-- `llama8b_160b_loss_snapshot_20260827.csv` is the observed-point training
-  snapshot used by the main loss figures.
+- `llama8b_160b_loss_snapshot_20260827.csv` is the immutable base snapshot
+  used by the main loss figures. The figure builder replaces route rows for
+  which a later complete ledger is listed below; in particular, its stale
+  27/5 tail is not the publication authority.
+- `llama8b_160b_training_summary_20260827.csv` is a historical predecessor.
+  It preserves then-live statuses and rounded endpoints and is superseded by
+  the complete route ledgers and final integration tables below.
 - `llama8b_mxfp4_rht_history_20260831.csv`,
   `llama8b_localcta_rht_canonical_metrics_20260830.csv`, and
   `llama8b_operand_h16_history_20260902.csv` are complete 3,815-row route
