@@ -3,8 +3,8 @@
 This directory contains the numerical inputs used to regenerate the report.
 `SHA256SUMS` is the authoritative inventory. The files contain scientific
 measurements only; operational storage paths, scheduler/service identities,
-timestamps, source lineage, checkpoint inventories, and checkpoint metadata
-were removed for release.
+timestamps, private source-run identities, checkpoint inventories, and
+checkpoint metadata were removed for release.
 
 ## Training and performance inputs
 
