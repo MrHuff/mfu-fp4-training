@@ -54,8 +54,9 @@ and treatment of underflow and saturation remain part of the quantizer
 contract \cite{gupta2015limited,chmiel2023accurate,ozkara2025sr}. Paired Hadamard preconditioning spreads
 outliers while preserving the unquantized dot product
 \cite{ashkboos2024quarot,tseng2025mxfp4,nvidia2025nvfp4,
-cim2026nativemxfp4}. Our numerical contribution is their contraction-specific
-integration, not the mechanisms in isolation.
+cim2026nativemxfp4}. Our numerical contribution specializes where these
+mechanisms act in each contraction and realizes that placement inside fused
+training kernels.
 
 The systems contribution is to optimize the quantizer, its physical layouts,
 the consuming matrix multiplication, and retained backward state as one
@@ -64,59 +65,58 @@ producer--consumer structure determine realized model speed
 \cite{dao2022flashattention,dao2023flashattention2,hsu2024liger,
 wijmans2024cutcrossentropy,spector2024thunderkittens,guo2026coda}.
 
-Table~\ref{tab:prior-work-boundary} separates established numerical mechanisms
-from the integrations evaluated here. The contribution is their format- and
-contraction-specific composition inside complete native training paths; we do
-not claim the underlying rounding rule, 2D scaling rule, or Hadamard transform
-as new.
-
-In particular, our SR is ordinary adjacent-bin rounding, not Chmiel et al.'s
-LUQ construction; its distinctive feature here is that only the row-facing
-$dY$ representation consumed by Dgrad is rounded stochastically. The 2D16 and
-2D32 scale definitions are prior work; our kernels produce one numerical
-weight encoding and both physical consumer layouts at the format's scale
-completion boundary. Hadamard mixing is also prior work; our named H16/H32
-routes use a fixed sign pattern on the paired Wgrad operands only and are not
-presented as RHT. These boundaries separate the borrowed numerical tools from
-the fused placement evaluated in this report.
+Table~\ref{tab:prior-work-boundary} pairs each established mechanism with the
+concrete delta evaluated here. LUQ means \emph{logarithmic unbiased
+quantization}: it makes logarithmic neural-gradient quantization unbiased by
+treating underflow probabilistically, rounding between adjacent logarithmic
+levels, and deriving the range from the tensor maximum so no value clips at
+the upper endpoint \cite{chmiel2023accurate}. Here, \emph{saturation} means
+clipping a magnitude above the scaled E2M1 maximum, $q_{\max}$, to
+$q_{\max}$. Because there is no representable upper neighbor, this clipping
+introduces systematic bias.
 
 \begin{table}[tbp]
   \centering
   \footnotesize
-  \caption{Prior art and the contribution boundary. The right column states
-  the route design and fused realization evaluated here, not a claim to have
-  introduced the underlying numerical mechanism.}
+  \caption{Established numerical mechanisms and the concrete system delta
+  evaluated in this report.}
   \label{tab:prior-work-boundary}
   \begin{tabularx}{\textwidth}{@{}lYY@{}}
     \toprule
-    Component & Established basis & This report \\
+    Component & Established method & Our delta \\
     \midrule
     SR rule
-      & Ordinary SR samples adjacent values in proportion to distance.
-        Chmiel et al.'s LUQ additionally handles logarithmic underflow and
-        clipping \cite{gupta2015limited,chmiel2023accurate,ozkara2025sr}
-      & E2M1 quantization uses ordinary adjacent-bin SR on selected gradients;
-        it is not LUQ and no whole-tensor unbiasedness after saturation is claimed \\
+      & Logarithmic unbiased quantization (LUQ) maps a sub-minimum magnitude
+        probabilistically to zero or $q_{\min}$, rounds in-range values between
+        adjacent logarithmic levels, and derives the range from $\max|x|$ to
+        avoid saturation (clipping above $q_{\max}$)
+        \cite{chmiel2023accurate}
+      & Our range follows each route's microscale contract. Finite E2M1
+        neighbors use the same distance-proportional SR rule; out-of-range
+        values saturate by clipping to $q_{\max}$. Rank-specific RNG state is
+        fused into the producer and preserved across resumes \\
     SR placement
       & Chmiel et al. use SR in Dgrad and on both Wgrad operands; NVIDIA applies
         gradient SR to both Dgrad and Wgrad
         \cite{chmiel2025fp4alltheway,nvidia2025nvfp4}
-      & Custom routes apply SR only to row-facing $dY$ for Dgrad; their Wgrad
-        carriers remain deterministic, and ranked RNG state survives resumes \\
+      & We apply SR only to the row-facing $dY$ consumed by Dgrad. Wgrad uses
+        deterministic carriers, separating the two orientations of the same
+        gradient tensor \\
     2D weights
       & NVIDIA/TE use one 2D16 weight encoding across Fprop and Dgrad; 2D32
         transpose-consistent MXFP4 is also prior art
         \cite{nvidia2025nvfp4,nvidia2026te,rahimifar2026transposition,
         cim2026nativemxfp4}
-      & Custom 2D16 and 2D32 producers fuse one numerical encoding into both
-        consumer layouts; the contribution is the native producer, not a new
-        2D scale definition \\
+      & Our fused 2D16 and 2D32 producers compute one orientation-consistent
+        weight encoding and emit both physical consumer layouts when the scale
+        domain completes \\
     Hadamard preconditioning
       & Tseng et al. randomize both MXFP4 backward GEMMs; NVIDIA uses one sampled
         sign vector throughout training for Wgrad; deterministic transforms are
         also prior art \cite{tseng2025mxfp4,nvidia2025nvfp4,cim2026nativemxfp4}
-      & Named routes fuse paired, fixed-sign H16 or H32 into Wgrad only. They are
-        not labeled RHT, and no random-sign concentration guarantee is claimed \\
+      & We make a fixed H16 or H32 sign diagonal part of the route contract,
+        apply the same transform to $X$ and $dY$ for Wgrad only, and fuse it
+        with column quantization \\
     Scale-aware fusion
       & NVFP4 uses a tensor-global outer scale, MXFP4 uses local power-of-two
         scales, and IO-aware fusion optimizes producer--consumer boundaries
