@@ -69,8 +69,8 @@ loss value is interpolated.
   reference. Continuous histories use EMA-31, and diamonds mark the final
   plotted endpoint. Pure-v5 observations are sparse after step 19,000; its
   late line is a display-only robust locally weighted scatterplot smoothing
-  (LOWESS) fit. The 27/5 depth hybrid is a checkpoint-aware stitch of three
-  complete logged segments, with no interpolated values.}
+  (LOWESS) fit. The 27/5 depth hybrid joins three logged continuations at exact
+  checkpoint boundaries, with no interpolated values.}
   \label{fig:llama8b-loss}
 \end{figure}
 
@@ -80,8 +80,9 @@ the late loss separation at the same scale without extrapolating any route.
 \begin{figure}[tbp]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss_zoom.png}
-  \caption{Training loss from 120B to 160B tokens. Curves use exact logged
-  observations and diamonds mark their final logged endpoints.}
+  \caption{Training loss from 120B to 160B tokens. Diamonds mark exact logged
+  endpoints. The 27/5 curve uses its complete logged history without
+  interpolation.}
   \label{fig:llama8b-loss-zoom}
 \end{figure}
 
