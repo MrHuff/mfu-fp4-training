@@ -83,7 +83,7 @@ pair; it never transforms the stored weight.
   \label{tab:recipe-state-ledger}
   \begin{tabularx}{\textwidth}{@{}lYYY@{}}
     \toprule
-    Route & Gradient rounding & Hadamard contract & BF16 body / head \\
+    Route & Gradient rounding & Hadamard contract & BF16 body blocks / output head \\
     \midrule
     BF16 & n/a & none & all / BF16 \\
     TE-native \nvfp{} in all blocks & TE gradient SR & TE-managed H16 on Wgrad & none / BF16 \\
@@ -112,6 +112,14 @@ weight: MX 2D32 for Fprop and CTA-local 2D16 for Dgrad. Wgrad does not consume
 the stored weight; it quantizes $X$ and $dY$ with MXFP4. This is a
 deliberate contraction-specific recipe rather than two layouts of one shared
 FP4 weight.
+
+Every operand marked ``MX'' in Table~\ref{tab:recipe-ledger} uses
+encode-centric E8M0 scales for activation and gradient blocks and the adaptive
+2D32 weight rule in Section~\ref{sec:scale-contracts}. The scale exponent
+itself is deterministic. ``Row SR'' applies to the E2M1 gradient values, not
+to their E8M0 scale. This distinction is part of the recipe: scale direction
+controls range and grid spacing, whereas data SR controls how a value is
+selected between adjacent E2M1 levels.
 
 Appendix~\ref{app:reproducibility} gives the checkpoint inclusion criteria and
 additional reproducibility details.

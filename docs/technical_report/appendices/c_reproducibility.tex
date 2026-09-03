@@ -23,9 +23,11 @@ The long-run curves combine only explicitly identified execution segments.
 The \localcta{}+fixed-H16 and operand-hybrid trajectories each cross a
 documented full-state resume boundary. Their manifests identify the source and
 continuation ranges; no overlapping step is counted twice. Pure-v5 telemetry
-is dense through step 19,000 and sparse thereafter. Its late line is a visual
-fit through exact observations and is never used to compute an endpoint or
-comparison.
+is dense through step 19,000. Seventy-four exact r5 observations survive after
+that point; the largest telemetry gap spans steps 24,700--33,010. The dashed
+late line is a visual LOWESS fit through those observations, evaluated on the
+common BF16 display grid. It is never used to compute a reported numeric
+endpoint, table entry, or statistic.
 
 \subsection{Checkpoint and evaluator contract}
 

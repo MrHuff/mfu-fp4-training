@@ -46,11 +46,11 @@
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss.png",
-      "sha256": "b3d20256007b3184ae523a9f24f7f91ad8282c40c618f903f2596da9f137f76b"
+      "sha256": "16dc8b0c9af1eb70faacb0b4b7826de9d901aa53330e3dc5332e3177ebf3a9c1"
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png",
-      "sha256": "57d068b78285551d5c009bebe496a549f2d81b47aacaddc884eb1eb1cd3f5554"
+      "sha256": "ccf71414f9d9c40362c24714818c4ee8b2e8648b38107bd9f0dbeb38c2e1cc6f"
     },
     {
       "path": "docs/technical_report/figures/llama8b_validation_nll.png",
@@ -115,12 +115,12 @@
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss.png",
-      "sha256": "b3d20256007b3184ae523a9f24f7f91ad8282c40c618f903f2596da9f137f76b",
+      "sha256": "16dc8b0c9af1eb70faacb0b4b7826de9d901aa53330e3dc5332e3177ebf3a9c1",
       "source_component": "."
     },
     {
       "path": "docs/technical_report/figures/llama8b_160b_training_loss_zoom.png",
-      "sha256": "57d068b78285551d5c009bebe496a549f2d81b47aacaddc884eb1eb1cd3f5554",
+      "sha256": "ccf71414f9d9c40362c24714818c4ee8b2e8648b38107bd9f0dbeb38c2e1cc6f",
       "source_component": "."
     },
     {
@@ -134,8 +134,8 @@
       "attribution_files": [],
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
-      "file_count": 586,
-      "file_ledger_sha256": "e2e01e4a5bacf49c65d6cdf2079f80400ac1378692a49f334805de1cac528784",
+      "file_count": 588,
+      "file_ledger_sha256": "cc545e26cf26859000d402e55ee4755971e37ccf6c277a73752c9b51b9e57b26",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [

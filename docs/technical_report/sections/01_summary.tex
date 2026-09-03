@@ -33,12 +33,14 @@ This report makes three contributions:
   \item Native, format-specific execution paths that fuse scale production,
         physical layouts, and saved backward state. The fastest custom path
         reaches 37.9K tokens/s/GPU in the common compiled-CE probe.
-  \item A contraction-specific integration of established numerical tools:
-        ordinary adjacent-bin SR only on the row-facing Dgrad input, one
-        transpose-consistent 2D weight encoding emitted in both consumer
-        layouts, and paired fixed-sign H16/H32 preconditioning only for Wgrad.
-        The contribution is this placement and fused realization, not a new
-        rounding rule, 2D scale definition, or Hadamard transform.
+  \item An operand-specific MXFP4 scale policy and its fused realization.
+        Development-only pretraining screens favored upward E8M0 rounding for
+        activation and gradient operands. The 2D32 weight path instead selects
+        the next smaller scale when the normalized tile maximum is below 0.87,
+        trading upper-tail clipping for a twice-finer grid. Across routes,
+        adjacent-bin SR acts only on the row-facing Dgrad input, paired
+        fixed-sign H16/H32 preconditioning acts only in Wgrad, and each pure or
+        depth-assigned format supplies transpose-consistent weight layouts.
   \item A 160B-token comparison of pure and hybrid routes, supported by
         same-state operator analysis, checkpoint-matched validation, and
         downstream evaluation. Appendix~\ref{app:code-release} links the

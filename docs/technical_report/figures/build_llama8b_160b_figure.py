@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Build the checkpoint-aware Llama-8B 160B-token loss figure.
 
-The primary input is the immutable, observed-point snapshot published with
-this report. That snapshot
+The primary input is the checksum-pinned observed-point snapshot published
+with this report. That snapshot
 stops pure-v5 at step 19,000 apart from a terminal marker. A separate,
 hash-pinned recovery ledger adds 74 exact later log samples from the same r5
 training attempt. Because those fragments are too sparse for the EMA used by
-the continuous histories, the figure displays a robust LOWESS trend over the
-sealed observations. The source points remain in the public ledger; endpoint
-values and tabulated endpoint differences use observations, never the fit.
+the continuous histories, the figure displays a robust LOWESS trend evaluated
+on the common BF16 display grid. The 74 source points are also shown as faint,
+unconnected markers. Endpoint values and tabulated endpoint differences use
+observations, never the fit.
 
 A checksum-sealed public ledger adds the complete seed-42 TE F0L4 and
 operand-wise fixed-H32 trajectories. Both contain the exact logged grid from
@@ -45,7 +46,7 @@ EXPECTED_SOURCE_SHA256 = (
     "5f71dcb1d26ef8085f98135e2ccdcda04e976b0862568b979c2471f6c13361cf"
 )
 EXPECTED_SNAPSHOT_SHA256 = (
-    "cd8c9b1b1820523636841e0a57a2700a9024b1cc36ff8af856415c2a90f8581b"
+    "0e05fc4bd3fcf5784becf09cf6392bd6a1757a8896a4082544c8b17cc0a1a2ab"
 )
 EXPECTED_SEED_ADJUSTMENT_SHA256 = (
     "5964b53007c344e1ef30771f925b7b4127a66116f4cf82e11aa1e39dd72b62e9"
@@ -188,6 +189,11 @@ def load_snapshot(path: Path) -> pd.DataFrame:
     frame = pd.read_csv(path)
     if list(frame.columns) != PUBLIC_SNAPSHOT_COLUMNS:
         raise RuntimeError("frozen loss snapshot contains non-public columns")
+    pure_v5 = frame[frame["lineage"] == "pure_v5"]
+    if len(pure_v5) != 382 or set(pure_v5["value_precision"]) != {
+        "printed_4_decimal"
+    }:
+        raise RuntimeError("frozen pure-v5 precision metadata changed")
     return frame
 
 
@@ -472,7 +478,7 @@ def attach_recovered_pure_v5(
     )
     recovered_steps = set(recovered["step"].astype(int))
     if pure_observed_steps & recovered_steps:
-        raise RuntimeError("recovered pure-v5 ledger overlaps the immutable snapshot")
+        raise RuntimeError("recovered pure-v5 ledger overlaps the base snapshot")
     return pd.concat([combined, recovered], ignore_index=True, sort=False)
 
 
@@ -793,7 +799,7 @@ def recovered_pure_v5_gap_points(snapshot: pd.DataFrame) -> pd.DataFrame:
 
 
 def estimated_pure_v5_trend(snapshot: pd.DataFrame) -> pd.DataFrame:
-    """Fit a robust visual trend across the sparse post-19k v5 evidence."""
+    """Fit sparse post-19k r5 evidence and evaluate it on a dense step grid."""
 
     dense_tail = snapshot[
         (snapshot["lineage"] == "pure_v5")
@@ -808,26 +814,44 @@ def estimated_pure_v5_trend(snapshot: pd.DataFrame) -> pd.DataFrame:
     )
     if len(dense_tail) != 31 or len(recovered) != 74 or len(anchors) != 105:
         raise RuntimeError("pure-v5 late-trend anchor inventory changed")
-    fitted = lowess(
+
+    display_grid = snapshot[
+        (snapshot["lineage"] == "bf16")
+        & (snapshot["segment"] == "observed_series")
+        & (snapshot["step"] >= 19_000)
+    ]["step"].astype(float)
+    if (
+        len(display_grid) != 384
+        or int(display_grid.iloc[0]) != 19_000
+        or int(display_grid.iloc[-1]) != 38_140
+        or display_grid.duplicated().any()
+    ):
+        raise RuntimeError("pure-v5 dense display grid changed")
+
+    fitted_loss = lowess(
         endog=anchors["loss"].to_numpy(),
         exog=anchors["step"].to_numpy(),
         frac=0.20,
         it=3,
+        xvals=display_grid.to_numpy(),
         is_sorted=True,
-        return_sorted=True,
+        return_sorted=False,
     )
-    trend = pd.DataFrame({"step": fitted[:, 0], "estimated_loss": fitted[:, 1]})
-    trend = trend[trend["step"] >= 19_000].copy()
+    trend = pd.DataFrame(
+        {"step": display_grid.to_numpy(), "estimated_loss": fitted_loss}
+    )
     trend["tokens_billions"] = trend["step"] * TOKENS_PER_STEP / 1.0e9
-    if len(trend) != 75 or not trend["estimated_loss"].map(math.isfinite).all():
+    if len(trend) != 384 or not trend["estimated_loss"].map(math.isfinite).all():
         raise RuntimeError("pure-v5 late-trend fit contract changed")
     return trend
 
 
 def estimated_pure_v5_gap_trend(
-    snapshot: pd.DataFrame, recovered_matched: pd.DataFrame
+    snapshot: pd.DataFrame,
+    recovered_matched: pd.DataFrame,
+    loss_trend: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Fit the late visual trend to raw, exact-step v5/BF16 differences."""
+    """Express the dense-grid v5 visual trend relative to BF16 EMA-31."""
 
     v5_dense = snapshot[
         (snapshot["lineage"] == "pure_v5")
@@ -843,30 +867,28 @@ def estimated_pure_v5_gap_trend(
         * (dense_matched["bf16_loss"] - dense_matched["v5_loss"])
         / dense_matched["bf16_loss"]
     )
-    anchors = pd.concat(
-        [
-            dense_matched[["step", "relative_difference_percent"]],
-            recovered_matched[["step", "relative_difference_percent"]],
-        ],
-        ignore_index=True,
-    ).sort_values("step")
-    if len(dense_matched) != 31 or len(recovered_matched) != 18 or len(anchors) != 49:
+    if len(dense_matched) != 31 or len(recovered_matched) != 18:
         raise RuntimeError("pure-v5 late relative-trend anchor inventory changed")
-    fitted = lowess(
-        endog=anchors["relative_difference_percent"].to_numpy(),
-        exog=anchors["step"].to_numpy(),
-        frac=0.35,
-        it=3,
-        is_sorted=True,
-        return_sorted=True,
+
+    bf16_display = snapshot[
+        (snapshot["lineage"] == "bf16")
+        & (snapshot["segment"] == "observed_series")
+        & (snapshot["step"] >= 19_000)
+    ][["step", "ema31"]].rename(columns={"ema31": "bf16_ema31"})
+    trend = bf16_display.merge(
+        loss_trend[["step", "estimated_loss"]],
+        on="step",
+        how="inner",
+        validate="one_to_one",
     )
-    trend = pd.DataFrame(
-        {"step": fitted[:, 0], "estimated_relative_difference_percent": fitted[:, 1]}
+    trend["estimated_relative_difference_percent"] = (
+        100.0
+        * (trend["bf16_ema31"] - trend["estimated_loss"])
+        / trend["bf16_ema31"]
     )
-    trend = trend[trend["step"] >= 19_000].copy()
     trend["tokens_billions"] = trend["step"] * TOKENS_PER_STEP / 1.0e9
     if (
-        len(trend) != 19
+        len(trend) != 384
         or not trend["estimated_relative_difference_percent"].map(math.isfinite).all()
     ):
         raise RuntimeError("pure-v5 late relative-trend fit contract changed")
@@ -879,14 +901,24 @@ def plot_recovered_pure_v5(
     trend: pd.DataFrame,
     terminal_step: int,
 ) -> None:
-    """Draw the estimated late trend; exact anchors remain in the public CSV."""
+    """Draw the late display fit and the exact sparse r5 observations."""
 
-    del recovered, terminal_step
+    points = recovered[recovered["step"] < terminal_step]
+    axis.scatter(
+        points["tokens_billions"],
+        points["loss"],
+        color=COLORS["pure_v5"],
+        marker="o",
+        s=7,
+        linewidths=0,
+        alpha=0.25,
+        zorder=3,
+    )
     axis.plot(
         trend["tokens_billions"],
         trend["estimated_loss"],
         color=COLORS["pure_v5"],
-        linestyle="-",
+        linestyle="--",
         linewidth=1.9,
         alpha=0.88,
         zorder=4,
@@ -899,14 +931,24 @@ def plot_recovered_pure_v5_gaps(
     trend: pd.DataFrame,
     terminal_step: int,
 ) -> None:
-    """Draw the estimated late gap trend; exact anchors remain in the ledger."""
+    """Draw the late relative display fit and exact shared-step differences."""
 
-    del matched, terminal_step
+    points = matched[matched["step"] < terminal_step]
+    axis.scatter(
+        points["tokens_billions"],
+        points["relative_difference_percent"],
+        color=COLORS["pure_v5"],
+        marker="o",
+        s=7,
+        linewidths=0,
+        alpha=0.25,
+        zorder=3,
+    )
     axis.plot(
         trend["tokens_billions"],
         trend["estimated_relative_difference_percent"],
         color=COLORS["pure_v5"],
-        linestyle="-",
+        linestyle="--",
         linewidth=1.9,
         alpha=0.88,
         zorder=4,
@@ -936,7 +978,9 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
     recovered_v5 = recovered_pure_v5_points(snapshot)
     recovered_v5_gaps = recovered_pure_v5_gap_points(snapshot)
     recovered_v5_trend = estimated_pure_v5_trend(snapshot)
-    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(snapshot, recovered_v5_gaps)
+    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(
+        snapshot, recovered_v5_gaps, recovered_v5_trend
+    )
 
     for lineage in ORDER:
         part = observed[observed["lineage"] == lineage].sort_values("step")
@@ -1023,12 +1067,15 @@ def plot(snapshot: pd.DataFrame, output: Path) -> None:
             [0],
             [0],
             color=COLORS[lineage],
-            linestyle="-",
+            linestyle="--" if lineage == "pure_v5" else "-",
             linewidth=1.9,
         )
         for lineage in ORDER
     ]
-    labels = [DISPLAY[lineage] for lineage in ORDER]
+    labels = [
+        f"{DISPLAY[lineage]} (late fit)" if lineage == "pure_v5" else DISPLAY[lineage]
+        for lineage in ORDER
+    ]
     fig.legend(
         handles,
         labels,
@@ -1066,7 +1113,9 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
     recovered_v5 = recovered_pure_v5_points(snapshot)
     recovered_v5_gaps = recovered_pure_v5_gap_points(snapshot)
     recovered_v5_trend = estimated_pure_v5_trend(snapshot)
-    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(snapshot, recovered_v5_gaps)
+    recovered_v5_gap_trend = estimated_pure_v5_gap_trend(
+        snapshot, recovered_v5_gaps, recovered_v5_trend
+    )
     recovered_v5 = recovered_v5[recovered_v5["tokens_billions"] >= start_tokens].copy()
     recovered_v5_gaps = recovered_v5_gaps[
         recovered_v5_gaps["tokens_billions"] >= start_tokens
@@ -1155,12 +1204,15 @@ def plot_zoom(snapshot: pd.DataFrame, output: Path) -> None:
             [0],
             [0],
             color=COLORS[lineage],
-            linestyle="-",
+            linestyle="--" if lineage == "pure_v5" else "-",
             linewidth=1.9,
         )
         for lineage in ORDER
     ]
-    labels = [DISPLAY[lineage] for lineage in ORDER]
+    labels = [
+        f"{DISPLAY[lineage]} (late fit)" if lineage == "pure_v5" else DISPLAY[lineage]
+        for lineage in ORDER
+    ]
     fig.legend(
         handles,
         labels,

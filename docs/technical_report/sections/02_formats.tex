@@ -66,13 +66,13 @@ producer--consumer structure determine realized model speed
 wijmans2024cutcrossentropy,spector2024thunderkittens,guo2026coda}.
 
 Table~\ref{tab:prior-work-boundary} pairs each established mechanism with the
-concrete delta evaluated here.
+concrete design delta implemented here.
 
 \begin{table}[tbp]
   \centering
   \footnotesize
-  \caption{Established numerical mechanisms and the concrete system delta
-  evaluated in this report.}
+  \caption{Established numerical mechanisms and the concrete design delta
+  implemented in this report.}
   \label{tab:prior-work-boundary}
   \begin{tabularx}{\textwidth}{@{}lYY@{}}
     \toprule
@@ -85,6 +85,17 @@ concrete delta evaluated here.
       & We apply SR only to the row-facing $dY$ consumed by Dgrad. Wgrad uses
         deterministic carriers, separating the two orientations of the same
         gradient tensor \\
+    MXFP4 scale selection
+      & E8M0 forces the block scale to a power of two. Rounding the exponent
+        up keeps the block maximum within the finite E2M1 endpoint; rounding
+        it down halves the decoded grid spacing while clamping the upper tail
+        to that endpoint
+        \cite{ocp2023mx,cim2026nativemxfp4}
+      & We choose the scale policy by operand class. Development-only
+        pretraining screens favored upward, encode-centric scales for
+        activations and gradients; the 2D32 weight path admits the finer scale
+        under a fixed tile-maximum test. The fused producer implements both
+        rules \\
     2D weights
       & NVIDIA/TE use one 2D16 weight encoding across Fprop and Dgrad; 2D32
         transpose-consistent MXFP4 is also prior art
@@ -119,6 +130,7 @@ concrete delta evaluated here.
 \FloatBarrier
 
 \subsection{The same four-bit values, three different scale contracts}
+\label{sec:scale-contracts}
 
 All three native routes ultimately present E2M1 operands---one sign bit, two
 exponent bits, and one fraction bit---to a Blackwell Tensor Core. Their
@@ -157,37 +169,62 @@ E4M3 is an FP8 scale with four exponent and three fraction bits. In \mxfp{},
 $S=1$, $s_b$ is an E8M0 power of two shared by 32 values, and the effective
 multiplier in Equation~\ref{eq:hierarchical-quant} is $\delta_b=s_b/6$.
 The block maximum therefore produces a scale locally, but adjacent scale
-levels differ by exactly two. The reported \mxfp{}-v4 routes use an
-encode-centric scale for activation and gradient blocks. For block maximum
-$a_b=\max_i|z_i|$, they compute
+levels differ by exactly two. This leaves a consequential choice about which
+neighboring power of two to store.
+
+We call upward exponent rounding \emph{encode-centric} scaling because it
+first encloses every source value in a scale that E2M1 can encode without
+upper-tail clipping. For a positive, finite block maximum
+$a_b=\max_i|z_i|$ within the supported E8M0 exponent range, it computes
 \begin{equation}
   s_b=2^{\lceil\log_2 a_b\rceil},\qquad
   q_i=Q_{\mathrm{E2M1}}\!\left(\frac{6z_i}{s_b}\right),\qquad
   \widehat z_i=\frac{s_b}{6}q_i.
   \label{eq:mxfp4-encode-scale}
 \end{equation}
-Rounding the exponent upward keeps the block maximum inside the finite E2M1
-range. A decode-centric alternative rounds the exponent downward, yielding a
-denser grid at the cost of possible clipping; it is implemented but is not
-used by the reported \mxfp{} activation or gradient paths. The orientation-consistent
-2D32 weight producer uses a separate adaptive rule: it starts from the safe
-upward-rounded scale $s_T$ for the maximum $a_T$ over a $32\!\times\!32$
-weight tile, then selects $s_T/2$ for a nonzero normal tile when
-$a_T/s_T<0.87$. The
-calibrated threshold trades limited tile-endpoint clipping for a grid twice as
-dense. E8M0 scale stochastic rounding is disabled in these recipes.
-``Row-SR'' elsewhere in the paper instead denotes stochastic rounding of the
-E2M1 gradient payload.
+The largest magnitude then maps to at most the finite E2M1 endpoint, 6. We
+call downward exponent rounding \emph{decode-centric} scaling: it chooses
+$s_b=2^{\lfloor\log_2 a_b\rfloor}$ so the decoded multiplier $s_b/6$ is half
+as large whenever $a_b$ is not already a power of two. That halves the grid
+spacing for values that remain in range, but values above the endpoint
+saturate to 6 and lose their excess magnitude. In plain terms,
+encode-centric scaling protects the largest value; decode-centric scaling
+represents smaller values more finely by accepting clipping at the top of the
+block. For example, if $a_b=10$, encode-centric scaling stores $s_b=16$ and
+does not clip; decode-centric scaling stores $s_b=8$, halves the spacing, and
+clips values whose magnitude exceeds 8.
+
+We expose this direction as part of the MXFP4 route rather than treating it as
+an incidental implementation detail. Development-only MXFP4 pretraining
+screens favored encode-centric over decode-centric scaling for both activation
+and gradient operands. These screens selected the recipe; they are not a
+reported quantitative comparison. All reported \mxfp{}-v4 routes therefore use
+Equation~\ref{eq:mxfp4-encode-scale} for those operands.
+
+Weights use a different trade-off. The orientation-consistent 2D32 producer
+starts from the safe upward-rounded scale $s_T$ for the maximum $a_T$ over a
+$32\!\times\!32$ tile. For a nonzero tile with a representable safe exponent,
+it selects $s_T/2$ only when $a_T/s_T<0.87$. The smaller scale halves the
+quantization spacing and accepts a fixed, bounded amount of upper-tail
+clipping. The same fused producer makes that decision once and emits both
+physical consumer layouts. Our MXFP4 contribution is this explicit
+operand-dependent scale policy together with its fused implementation;
+neither upward nor downward E8M0 rounding is a new number format.
+
+E8M0 scale stochastic rounding is disabled in these recipes. ``Row-SR''
+elsewhere in the paper instead denotes stochastic rounding of the E2M1
+gradient payload; it does not randomize the E8M0 scale exponent.
 
 \begin{figure}[tbp]
   \centering
   \includegraphics[width=0.96\textwidth]{figures/fp4_mxfp4_scale_rounding.png}
-  \caption{Encode- and decode-centric E8M0 scale selection. Rounding the block
-  maximum upward preserves the E2M1 endpoint. For a non-power-of-two maximum,
-  rounding it downward halves the decoded grid spacing but can clip large
-  values. The reported activation and gradient paths use the encode-centric
-  rule. Their 2D32 weight path selects the smaller scale only under the
-  calibrated $a_T/s_T<0.87$ condition.}
+  \caption{Encode- and decode-centric E8M0 scale selection. Encode-centric
+  scaling rounds the block maximum upward and keeps every input within the
+  E2M1 endpoint. For a non-power-of-two maximum, decode-centric scaling rounds
+  downward, halves the decoded grid spacing, and clips the block tail. The
+  reported activation and gradient paths use the encode-centric rule. The
+  2D32 weight path selects the smaller scale only under the fixed
+  $a_T/s_T<0.87$ condition.}
   \label{fig:mxfp4-scale-rounding}
 \end{figure}
 

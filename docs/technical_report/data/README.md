@@ -8,10 +8,12 @@ checkpoint metadata were removed for release.
 
 ## Training and performance inputs
 
-- `llama8b_160b_loss_snapshot_20260827.csv` is the immutable base snapshot
+- `llama8b_160b_loss_snapshot_20260827.csv` is the checksum-pinned base snapshot
   used by the main loss figures. The figure builder replaces route rows for
   which a later complete ledger is listed below; in particular, its stale
-  27/5 tail is not the publication authority.
+  27/5 tail is not the publication authority. Pure-v5 values retain their
+  original four-decimal log precision; correcting that precision label did
+  not change any step, loss, EMA, or endpoint value.
 - `llama8b_160b_training_summary_20260827.csv` is a historical predecessor.
   It preserves then-live statuses and rounded endpoints and is superseded by
   the complete route ledgers and final integration tables below.
@@ -29,8 +31,9 @@ checkpoint metadata were removed for release.
   table of their exact step-38,140 raw endpoints. Private run and checkpoint
   provenance remains only in the sealed evidence repository.
 - `llama8b_pure_v5_recovered_log_points_20260830.csv` contains 74 sparse,
-  literal observations. They anchor a display-only LOWESS guide; reported
-  endpoint values remain observed values.
+  literal r5 observations. They anchor a display-only LOWESS guide evaluated
+  on the common BF16 display grid; faint points in the figures remain the
+  literal observations, and reported endpoint values remain observed values.
 - `llama8b_seed42_overlap_20260828.csv` and
   `llama8b_seed42_loss_adjustment_20260828.csv` record the exact overlap and
   robust seed-alignment calculation.

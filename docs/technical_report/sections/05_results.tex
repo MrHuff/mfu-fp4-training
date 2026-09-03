@@ -60,17 +60,20 @@ relative-difference convention used by NVIDIA
 \end{equation}
 Zero is the BF16 reference and a negative value means the low-precision route
 has higher loss. Reported comparisons use exact shared logged steps; no
-reported loss value is interpolated. The v5 line is the display-only fit
-described below.
+reported loss value is interpolated. The dashed late-v5 line is the
+display-only fit described below.
 
 \begin{figure}[tbp]
   \centering
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss.png}
   \caption{Llama-8B training loss and relative difference from the BF16
   reference. Continuous histories use EMA-31, and diamonds mark the final
-  plotted endpoint. Pure-v5 observations are sparse after step 19,000; its
-  late line is a display-only robust locally weighted scatterplot smoothing
-  (LOWESS) fit. The 27/5 depth hybrid joins three logged training segments at
+  plotted endpoint. Pure-v5 telemetry is dense through step 19,000. After that
+  point, the upper panel marks 74 exact recovered r5 observations, including
+  the terminal diamond; the lower panel marks the 18 observations with an
+  exact BF16 step match. Dashed lines show a display-only robust locally
+  weighted scatterplot smoothing (LOWESS) fit evaluated on the common BF16
+  display grid. The 27/5 depth hybrid joins three logged training segments at
   exact checkpoint boundaries, with no interpolated values.}
   \label{fig:llama8b-loss}
 \end{figure}
@@ -83,8 +86,9 @@ the late loss separation at the same scale without extrapolating any route.
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss_zoom.png}
   \caption{Training loss from 120B to 160B tokens. Diamonds mark exact logged
   endpoints. The 27/5 curve uses its complete logged history without
-  interpolation. As in Figure~\ref{fig:llama8b-loss}, the sparse late-v5
-  observations are shown by a display-only LOWESS fit.}
+  interpolation. As in Figure~\ref{fig:llama8b-loss}, the late-v5 markers are
+  exact r5 observations and the dashed curve is their display-only dense-grid
+  LOWESS fit.}
   \label{fig:llama8b-loss-zoom}
 \end{figure}
 
