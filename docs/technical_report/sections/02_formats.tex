@@ -86,15 +86,14 @@ introduces systematic bias.
     Component & Established method & Our delta \\
     \midrule
     SR rule
-      & Logarithmic unbiased quantization (LUQ) maps a sub-minimum magnitude
-        probabilistically to zero or $q_{\min}$, rounds in-range values between
-        adjacent logarithmic levels, and derives the range from $\max|x|$ to
-        avoid saturation (clipping above $q_{\max}$)
-        \cite{chmiel2023accurate}
-      & Our range follows each route's microscale contract. Finite E2M1
-        neighbors use the same distance-proportional SR rule; out-of-range
-        values saturate by clipping to $q_{\max}$. Rank-specific RNG state is
-        fused into the producer and preserved across resumes \\
+      & FP4 All the Way uses distance-proportional SR between adjacent
+        representable values for backward and update quantization
+        \cite{chmiel2025fp4alltheway}. At the upper endpoint, a larger scaled
+        magnitude saturates by clipping to $q_{\max}$
+      & We use the same adjacent-value probability on finite E2M1 bins, while
+        the representable range follows each route's microscale contract.
+        Rank-specific RNG state is fused into the producer and preserved across
+        resumes \\
     SR placement
       & Chmiel et al. use SR in Dgrad and on both Wgrad operands; NVIDIA applies
         gradient SR to both Dgrad and Wgrad
