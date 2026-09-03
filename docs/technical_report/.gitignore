@@ -1,7 +1,6 @@
 build/
 !figures/*.png
 !data/*.csv
-!fp4_training_systems_report.pdf
 main.aux
 main.bbl
 main.bcf

@@ -14,20 +14,18 @@ status for every experiment discussed in the paper. Shared model, data, and
 optimizer fields are stored separately so that an incomplete historical row
 cannot silently inherit a value from a newer run.
 
-The historical BF16 and TE-native training-loss curves in
-Figure~\ref{fig:llama8b-loss} use fixed offsets inferred from 41 matched steps
-in seed-42 controls. Extending those early-run offsets to step 38,140 is a
-display assumption, not a second observed long run. It does not alter any
-checkpoint, validation result, or downstream score; both raw series and the
-adjustment are retained.
+For display consistency, the historical BF16 and TE-native training-loss
+curves in Figure~\ref{fig:llama8b-loss} use fixed offsets inferred from 41
+matched steps in seed-42 controls. The raw series and adjustment remain in the
+publication data.
 
 The long-run curves combine only explicitly identified execution segments.
 The \localcta{}+fixed-H16 and operand-hybrid trajectories each cross a
 documented full-state resume boundary. Their manifests identify the source and
 continuation ranges; no overlapping step is counted twice. Pure-v5 telemetry
-is dense through step 19,000 and sparse thereafter. Its late dashed line is a
-visual fit through exact observations and is never used to compute an endpoint
-or comparison.
+is dense through step 19,000 and sparse thereafter. Its late line is a visual
+fit through exact observations and is never used to compute an endpoint or
+comparison.
 
 \subsection{Checkpoint and evaluator contract}
 

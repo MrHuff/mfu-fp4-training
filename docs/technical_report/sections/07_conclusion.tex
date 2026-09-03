@@ -9,8 +9,8 @@ speed--quality point: 37.2K tokens/s/GPU, 86.3\% BF16 MFU, a 2.11\% raw
 endpoint-loss excess, and the lowest observed fixed-stream validation NLL. Its
 downstream ranking remains task dependent. Neither the tested depth-wise nor
 operand-wise hybrid improves this combined point. The opposite outcomes of
-Hadamard preconditioning under \mxfp{} and CTA-local scaling show that scale
-domain, rounding, and preconditioning must be chosen together. UE5M3 results
+Hadamard preconditioning under \mxfp{} and CTA-local scaling motivate choosing
+scale domain, rounding, and preconditioning jointly. UE5M3 results
 on a separate model motivate a complementary next step: combine wider unsigned
 block scales with local production or delayed global scaling
 \cite{hu2026ue5m3}.

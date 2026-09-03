@@ -213,7 +213,7 @@ def make_format_execution_routes() -> None:
             [
                 (0.03, 0.16, "BF16 producer\nRMSNorm / SwiGLU", MID),
                 (0.29, 0.28, "fused local amax$_{32}$\nE8M0 + E2M1 pack\nrow and column views", BLUE),
-                (0.67, 0.16, "Blackwell\nMXFP4 GEMM", GREEN),
+                (0.67, 0.16, "native\nMXFP4 GEMM", GREEN),
             ],
             "Power-of-two scales are local to 32 values: quantization can finish as tiles are produced.",
         ),

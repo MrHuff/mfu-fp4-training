@@ -1,9 +1,10 @@
-# Format-Aware Fusion for Fast FP4 Llama Pretraining
+# Format-Aware Fusion for Fast FP4 Pretraining
+
+*Native MXFP4 and NVFP4 Training on FP4-Compatible Hardware*
 
 This directory is the self-contained source release for the technical report.
 It includes the LaTeX source, bibliography, public numerical inputs, figure and
-table builders, rendered figures, the reviewed PDF, and an arXiv source-bundle
-builder.
+table builders, rendered figures, and an arXiv source-bundle builder.
 
 The paper covers native MXFP4 and CTA-local NVFP4 execution, complete-boundary
 fusion, 160B-token Llama-8B training curves, same-accelerator performance,

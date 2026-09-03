@@ -1,6 +1,5 @@
 \section{Results}
 \label{sec:results}
-\label{sec:training-results}
 
 \subsection{What throughput do the end-to-end routes achieve?}
 
@@ -68,12 +67,10 @@ loss value is interpolated.
   \includegraphics[width=0.98\textwidth]{figures/llama8b_160b_training_loss.png}
   \caption{Llama-8B training loss and relative difference from the BF16
   reference. Continuous histories use EMA-31, and diamonds mark the final
-  plotted endpoint. Sparse pure-v5 telemetry after step 19,000 is shown as
-  exact anchors with a robust locally weighted scatterplot smoothing (LOWESS)
-  display fit. The fit is not used for endpoint values or comparisons. The
-  27/5 depth-hybrid line stops at its last continuous observation at step
-  35,530; its open diamond is the separate exact step-38,140 endpoint. The
-  blank interval contains no recovered telemetry.}
+  plotted endpoint. Pure-v5 observations are sparse after step 19,000; its
+  late line is a display-only robust locally weighted scatterplot smoothing
+  (LOWESS) fit. The 27/5 depth-hybrid history has no observations between its
+  continuous step-35,530 trace and the separate open step-38,140 endpoint.}
   \label{fig:llama8b-loss}
 \end{figure}
 
@@ -89,9 +86,8 @@ the late loss separation at the same scale without extrapolating any route.
   \label{fig:llama8b-loss-zoom}
 \end{figure}
 
-The TE route with four final BF16 blocks and the fixed-H32 operand hybrid each
-contain 3,815 exact logged observations through step 38,140. Both trajectories
-also have a sealed, resumable checkpoint at step 38,147.
+The TE route with four final BF16 blocks and the fixed-H32 operand hybrid both
+complete the scheduled training horizon.
 
 \begin{table}[H]
   \centering
@@ -124,9 +120,7 @@ route at 2.11\%; it is 0.76\% above TE-native. The fixed-H32 operand hybrid
 ends 1.85\% above the pure \mxfp{}-H32 route and 4.00\% above BF16.
 
 Using tensors from the step-28,000 \mxfp{}+row-SR+fixed-H32 checkpoint, we replayed
-Dgrad with \localcta{} and \mxfp{}. The surrounding replay configuration used
-plain-H16 preconditioning only for Wgrad, which does not enter the scored
-contraction. Against a BF16 replay, \localcta{} had lower Dgrad error energy
+Dgrad with \localcta{} and \mxfp{}. Against a BF16 replay, \localcta{} had lower Dgrad error energy
 in all 288 layer--component comparisons; the geometric-mean
 $E_{\mathrm{MX}}/E_{\mathrm{localCTA}}$ ratio was 1.292. The completed
 plain-H16 operand hybrid nevertheless ends 1.99\% above \mxfp{}+row-SR+fixed H32 in
@@ -135,18 +129,8 @@ aggregation contract.
 
 \subsection{Validation loss}
 
-Validation uses one fixed external stream with a complete document-and-token
-provenance record. The converted and native evaluators agree exactly at the
-full 8,192-token context. As a temporal control, BF16 validation NLL falls from
-3.28327 at step 2,000 to 2.46052 at step 29,000. The paired difference is
-$-0.82275$ NLL with a sequence-level standard error of 0.00371, placing the
-comparison beyond the predeclared five-standard-error temporal gate. This
-control establishes that the stream and evaluator recover the expected
-learning order before comparing low-precision routes. Training loss is not
-used as a substitute for validation loss.
-
 Figure~\ref{fig:llama8b-validation} evaluates every available exact checkpoint
-on that same stream. At the common step-38,000 cut, \mxfp{} with fixed H32 has
+on one fixed external stream. At the common step-38,000 cut, \mxfp{} with fixed H32 has
 the lowest observed validation NLL, 2.422804. BF16 records 2.430206, the TE
 route with four final BF16 blocks 2.437475, and TE-native 2.440488. The
 fixed-H32 operand hybrid records 2.463842, compared with 2.460331 for
@@ -172,11 +156,9 @@ repeated-seed estimates.
 
 \subsection{How do the routes compare on downstream tasks?}
 
-Each route is evaluated from its complete step-38,000 checkpoint using BF16
-inference after verifying agreement with the training RoPE and RMSNorm
-definitions. Eleven routes meet these criteria; routes without a complete
-step-38,000 checkpoint are omitted. Every route uses the same MMLU,
-HellaSwag, WinoGrande, and ARC-Challenge protocol.
+The common panel evaluates all eleven routes with a complete exact step-38,000
+checkpoint. Every route uses BF16 inference and the same MMLU, HellaSwag,
+WinoGrande, and ARC-Challenge protocol.
 
 \begin{table}[htbp]
   \centering

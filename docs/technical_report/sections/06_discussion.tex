@@ -36,9 +36,9 @@ one-factor ablations.
 Neither tested hybrid dominates the strongest pure custom route. The
 depth-wise hybrid and both operand-wise hybrids are slower and have higher
 endpoint and validation loss than \mxfp{}-H32. The same-state replay still
-finds lower Dgrad error for CTA-local in every measured cell. Local operator
-error can therefore motivate a candidate, but the full training trajectory
-adjudicates the recipe.
+finds lower Dgrad error for CTA-local in every measured cell. The completed
+hybrid trajectories do not preserve that operator-level advantage in endpoint
+or validation loss.
 
 \subsection{Wider block scales are a complementary direction}
 
@@ -63,10 +63,7 @@ describe complete recipes rather than one-factor causal effects. The
 same-state diagnostic covers one checkpoint and three sequence-2,048 batches.
 It replays the linear operators without attention mixing, residual paths, or
 RoPE, so it does not establish a universal layer-sensitivity rule.
-Pure-v5 telemetry is sparse after step 19,000, and its dashed late curve is only
-a visual fit through exact observations. The fixed validation stream is not a
+Pure-v5 telemetry is sparse after step 19,000, and its late curve is only a
+visual fit through exact observations. The fixed validation stream is not a
 proven zero-overlap split from every historical training trajectory. These
-limits govern the claims throughout the report. The historical BF16 and
-TE-native seeds were not recovered. Their plotted curves use early-run
-seed-alignment offsets; Table~\ref{tab:training-endpoints} reports the
-unadjusted observations.
+limits govern the claims throughout the report.

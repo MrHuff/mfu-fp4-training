@@ -27,7 +27,7 @@ boundary.
 
 \subsection{What is fused in a Llama block}
 
-The system specializes the four repeated boundaries in
+The system presents four execution panels in
 Figure~\ref{fig:qkv-ffn-fusion}: QKV forward and backward, and FFN forward and
 backward. The serial schedule writes BF16 intermediates to high-bandwidth
 memory (HBM), reads them back to compute scales and layouts, and repeats that
@@ -49,8 +49,8 @@ its consumers require.
   \label{fig:qkv-ffn-fusion}
 \end{figure}
 
-The arithmetic remains unchanged. Fusion removes intermediate traffic and
-exposes independent work to the scheduler. The scale stage is nevertheless
+For a fixed route, fusion preserves the defined numerical contract. It removes
+intermediate traffic and exposes independent work to the scheduler. The scale stage is nevertheless
 format-specific: \mxfp{} completes a local 32-value reduction; global
 \nvfp{} starts a tensor-wide maximum early; and \localcta{} carries two tile
 outer scales through the complete contraction and applies their product in the
@@ -88,8 +88,9 @@ SR; neither uses Hadamard preconditioning.
 
 The \emph{operand-wise} hybrid instead chooses the format per contraction. A
 same-state operator analysis found lower Dgrad error for \localcta{} than for
-\mxfp{} in every measured layer and component. This motivates \mxfp{} for
-Fprop and Wgrad and \localcta{} for Dgrad. The diagnostic and its scope are
+\mxfp{} in every measured layer and component. This motivates replacing
+\mxfp{} Dgrad with \localcta{} while retaining the established \mxfp{} Fprop
+and Wgrad path. The diagnostic and its scope are
 reported in Section~\ref{sec:results} and
 Appendix~\ref{app:dgrad-diagnostic}.
 

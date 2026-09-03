@@ -87,9 +87,9 @@ contraction-specific composition inside complete native training paths.
         preserving the unquantized dot product
         \cite{ashkboos2024quarot,tseng2025mxfp4,nvidia2025nvfp4,
         cim2026nativemxfp4}
-      & A paired fixed-sign H32 transform is fused into MXFP4 Wgrad; named
-        H16 and H32 routes compare complete recipes under MXFP4 and CTA-local
-        scaling \\
+      & A paired fixed-sign H32 transform is fused into MXFP4 Wgrad; the named,
+        differently configured H16 and H32 routes compare complete recipes
+        under MXFP4 and CTA-local scaling \\
     Scale scheduling
       & Standard NVFP4 uses a tensor-global outer scale; MXFP4 uses local
         power-of-two block scales \cite{ocp2023mx,nvidia2025nvfp4}
