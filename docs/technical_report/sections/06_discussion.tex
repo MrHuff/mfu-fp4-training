@@ -1,21 +1,5 @@
 \section{Discussion}
 
-\subsection{Step speed is not time-to-quality}
-
-Let $R_0$ be baseline throughput and $N_0$ the tokens required to reach a
-predeclared quality target. If FP4 improves throughput by $g$ but requires
-$\tau$ more tokens, then
-\begin{equation}
-  \frac{T_{\mathrm{FP4}}}{T_0}=\frac{1+\tau}{1+g}.
-  \label{eq:time-to-quality}
-\end{equation}
-FP4 wins only when the throughput gain exceeds the additional tokens required.
-The measured routes differ in both throughput and loss trajectory. Computing
-their time-to-quality ratio still requires a predeclared quality target; a
-training-loss gap at one step is not enough.
-
-\subsection{System and numerical choices interact}
-
 The measured TE routes track BF16 closely: TE-native and the
 four-final-BF16-block route end 1.34\% and 0.87\% above the raw BF16 loss.
 Their common probes reach 27.6K and 27.1K tokens/s/GPU. A separate
@@ -43,35 +27,3 @@ controlled replay on identical saved tensors still finds lower Dgrad error for
 CTA-local in all 288 tested layer--projection comparisons. The completed hybrid
 trajectories do not preserve that operator-level advantage in endpoint or
 validation loss.
-
-\subsection{Wider block scales are a complementary direction}
-
-A separate direction is to change the scale representation rather than mix
-MXFP4 and CTA-local NVFP4. UE5M3 FP4 pairs E2M1 payloads with an unsigned
-E5M3 block scale. Hu et al. report end-to-end Nemotron-H 8B pretraining with
-per-operand tensor scales that are updated every 50 steps and held fixed
-between updates, selective SR on backward gradients, no RHT, and FP4 in all
-eligible internal linears
-\cite{hu2026ue5m3}. This is a software-emulated block-scale path on a different
-model and training setup, not one of the native Llama routes measured here.
-It nevertheless shows that a wider set of representable scale values can
-support a recipe with periodic scaling and without RHT. Native UE5M3 combined
-with a CTA-local producer schedule, or with delayed tensor scaling and global
-outer scales, is an untested next step.
-
-\subsection{Limitations}
-
-Each long-run recipe is a single trajectory. Some resumes change local-batch
-and gradient-accumulation settings while preserving the global batch, and the
-fixed-sign Hadamard routes differ from their controls in more than
-preconditioning alone. These comparisons therefore describe complete recipes
-rather than isolating the effect of one design choice. The controlled
-identical-tensor diagnostic covers one checkpoint and three sequence-2,048
-batches.
-It replays the linear operators without attention mixing, residual paths, or
-RoPE, so it does not establish a universal layer-sensitivity rule.
-Training-loss observations for custom global NVFP4 are sparse after step
-19,000, and its dashed late curve is a display-only fit evaluated at the BF16
-plotting steps. The fixed validation
-stream is not a proven zero-overlap split from every historical training
-trajectory. These limits govern the claims throughout the report.

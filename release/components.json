@@ -135,7 +135,7 @@
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
       "file_count": 588,
-      "file_ledger_sha256": "d4679b69637e9d80c6c908e2212273a466dafef700b1d71c240a9714f3d4468e",
+      "file_ledger_sha256": "13849a5d52719c7f023d5547e95cdc55efdde8e17ce295b8c7d18065a8926c3e",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [

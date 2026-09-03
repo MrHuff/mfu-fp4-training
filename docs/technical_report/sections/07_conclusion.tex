@@ -1,18 +1,28 @@
-\section{Conclusion}
+\section{Conclusion and Further Work}
 
 Format-aware fusion makes the complete FP4 producer--consumer boundary the
 unit of optimization. The TE routes give the closest observed training-loss
 tracking, with measured tensor-global execution paths at 27.1--27.6K
 tokens/s/GPU. Among the custom routes, \mxfp{} with row-gradient SR and
-fixed-sign H32 Wgrad preconditioning gives the strongest measured
-speed--quality point: 37.2K tokens/s/GPU, 86.3\% BF16 MFU, a 2.11\% raw
+fixed-sign H32 Wgrad preconditioning reaches 37.2K tokens/s/GPU, 86.3\%
+BF16 MFU, a 2.11\% raw
 endpoint-loss excess, and the lowest observed validation NLL on the fixed
 external data stream. Its
-downstream ranking remains task dependent. Neither the tested depth-wise nor
-operand-wise hybrid improves this combined point. The opposite outcomes of
-Hadamard preconditioning under \mxfp{} and CTA-local scaling motivate choosing
-the group of values sharing each scale, the rounding rule, and the
-preconditioner jointly. UE5M3 results
-on a separate model motivate a complementary next step: combine wider unsigned
-block scales with local production or delayed global scaling
-\cite{hu2026ue5m3}.
+downstream ranking remains task dependent. BF16 records the highest MMLU
+score, the fixed-H32 operand hybrid the highest WinoGrande score, and
+\mxfp{} with row-SR and fixed H32 the highest HellaSwag and ARC-Challenge
+scores. In this panel, late training loss and downstream accuracy therefore do
+not have a monotonic ordering; training loss alone does not rank the downstream
+quality of these complete low-precision recipes.
+
+Neither the tested depth-wise nor operand-wise hybrid improves the combined
+speed--quality point of the strongest pure custom route. The opposite outcomes
+of Hadamard preconditioning under \mxfp{} and CTA-local scaling motivate
+choosing the group of values sharing each scale, the rounding rule, and the
+preconditioner jointly. A complementary direction is to change the scale
+representation itself. UE5M3 FP4 pairs E2M1 payloads with an unsigned E5M3
+block scale and has supported a recipe with periodic tensor-scale updates,
+selective SR, and no Hadamard preconditioning on a separate model and training
+setup \cite{hu2026ue5m3}. Combining wider unsigned block scales with a
+CTA-local producer schedule, or with delayed tensor scaling and global outer
+scales, is a natural next step.
