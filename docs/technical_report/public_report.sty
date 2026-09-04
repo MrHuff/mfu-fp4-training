@@ -2,6 +2,7 @@
 \ProvidesPackage{public_report}[2026/08/28 Public technical report styling]
 
 \RequirePackage{xcolor}
+\RequirePackage{graphicx}
 \RequirePackage{fancyhdr}
 \RequirePackage{caption}
 
@@ -19,6 +20,10 @@
 
 \fancypagestyle{publicreport}{%
   \fancyhf{}
+  \fancyhead[L]{%
+    \raisebox{-0.7mm}{\includegraphics[height=4.2mm]{assets/graphcore-symbol.png}}%
+    \hspace{1.5mm}{\sffamily\bfseries\footnotesize GRAPHCORE RESEARCH}%
+  }
   \fancyhead[R]{\sffamily\footnotesize\color{ReportMuted}TECHNICAL REPORT}
   \fancyfoot[L]{\sffamily\scriptsize\color{ReportMuted}Format-Aware FP4 Training}
   \fancyfoot[R]{\sffamily\scriptsize\color{ReportMuted}\thepage}
@@ -70,7 +75,13 @@
   \begin{titlepage}
     \thispagestyle{empty}
     \noindent
-    \hfill{\sffamily\small\color{ReportMuted}TECHNICAL REPORT}
+    \begin{minipage}[c]{0.68\textwidth}
+      \includegraphics[height=13mm]{assets/graphcore-symbol.png}%
+      \hspace{3mm}{\sffamily\bfseries\large GRAPHCORE RESEARCH}
+    \end{minipage}%
+    \begin{minipage}[c]{0.32\textwidth}
+      \raggedleft\sffamily\small\color{ReportMuted}TECHNICAL REPORT
+    \end{minipage}
 
     \vspace{8mm}
     {\color{ReportAccent}\rule{\textwidth}{1.6pt}}

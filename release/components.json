@@ -1,6 +1,10 @@
 {
   "binary_allowlist": [
     {
+      "path": "docs/technical_report/assets/graphcore-symbol.png",
+      "sha256": "4bde5cca2c25403f51fe1147fd589e2469c88fc67c0338f2a8db81a72a42759d"
+    },
+    {
       "path": "docs/technical_report/figures/fp4_1p2b_steady_mfu.png",
       "sha256": "769c48c65538954dcfe649dceb598066176736464e0a2e7bb1cdef03452544f8"
     },
@@ -58,6 +62,11 @@
     }
   ],
   "binary_assets": [
+    {
+      "path": "docs/technical_report/assets/graphcore-symbol.png",
+      "sha256": "4bde5cca2c25403f51fe1147fd589e2469c88fc67c0338f2a8db81a72a42759d",
+      "source_component": "."
+    },
     {
       "path": "docs/technical_report/figures/fp4_1p2b_steady_mfu.png",
       "sha256": "769c48c65538954dcfe649dceb598066176736464e0a2e7bb1cdef03452544f8",
@@ -134,8 +143,8 @@
       "attribution_files": [],
       "commit": "08eb5c93e8370cb48f951510a08c5d51c748630e",
       "declared_release_gate": null,
-      "file_count": 588,
-      "file_ledger_sha256": "03df82fa6f2694a757695854e987ff5900ec1b258cced19398bbd78cc2372dd7",
+      "file_count": 589,
+      "file_ledger_sha256": "6edad36d6ba71c582526fd4edba1399113dd354c68aa625ad17d79d56e6a7ef4",
       "git_tree": "de67ace3bd0558195ebaa52edc32aef580d354ba",
       "id": "mfu_fp4_training",
       "license_files": [

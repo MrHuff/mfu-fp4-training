@@ -57,6 +57,13 @@ CUTLASS, FlashAttention, QUTLASS, FA4, or Mamba CUDA trees.
 - `low_bits_training/quantization/cuda_ops/gemm_evaluator.cu` retains its
   inline NVIDIA copyright and BSD-style terms.
 
+## Corporate mark
+
+`docs/technical_report/assets/graphcore-symbol.png` is the Graphcore corporate
+mark used to identify the research organization on the report. It is not
+covered by the repository's MIT or CC BY 4.0 licenses. Graphcore and the
+Graphcore mark remain the property of Graphcore Ltd.
+
 The OpenAI Simple Evals derivative and experimental StableSPAM derivative are
 excluded from the public export.
 
